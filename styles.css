@@ -1,0 +1,118 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    position: relative;
+    overflow: hidden; /* Add overflow hidden to prevent video overflow */
+}
+
+/* Add a video container */
+.video-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1; /* Set a lower z-index to send it to the background */
+}
+
+/* Style the video */
+.video-container video {
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@font-face {
+    font-family: 'Roman SD';
+    src: url('Roman SD.ttf') format('woff2');
+}
+
+header {
+    background-color: rgba(128, 128, 128, 0.5);
+    color: #fff;
+    padding: 20px 0;
+    text-align: center;
+    font-family: 'Roman SD', sans-serif; 
+    font-size: 3em;
+    position: relative;
+    z-index: 1; /* Ensure the header is above the video */
+}
+
+.banner {
+    text-align: center;
+}
+
+.banner-content {
+    position: relative;
+    margin-bottom: 100px;
+}
+
+.banner h1 {
+    font-size: 10em;
+    margin-bottom: 30px;
+    font-family: 'Roman SD', sans-serif;
+}
+
+.banner h2,
+.btn,
+footer {
+    font-size: 1.2em;
+    color: #fff;
+    font-family: 'Roman SD';
+}
+
+.btn {
+    display: inline-block;
+    background-color: #ff5733;
+    color: #fff;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 1.2em;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #e64720;
+}
+
+.character-selection {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.character-selection label {
+    margin: 0 10px;
+}
+
+.character-selection img {
+    width: 150px;
+    height: auto;
+}
+
+.character-selection h2 {
+    color: white;
+}
+
+footer {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    text-align: center;
+    padding: 20px 0;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    z-index: 1; /* Ensure the footer is above the video */
+}

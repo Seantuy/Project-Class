@@ -1,0 +1,106 @@
+---
+title: "Survival Analysis On Lung Cancer Dataset"
+author: "Daniel Mon"
+date: "2024-12-14"
+output: pdf_document
+---
+
+
+
+# The Lung Dataset
+
+The `lung` dataset from the `{survival}` package contains observations of patients with advanced lung cancer from the North Central Cancer Treatment Group. For this tutorial, we focus on the following variables:
+
+- `time`: Observed survival time in days.
+- `status`: Event indicator (1 = event occurred, 0 = censored).
+- `sex`: 1 = Male, 2 = Female.
+
+```{r}
+library(knitr)
+library(dplyr)
+library(survival)
+library(ggplot2)
+library(tibble)
+library(lubridate)
+library(ggsurvfit)
+library(gtsummary)
+library(tidycmprsk)
+library(devtools)
+devtools::install_github("zabore/condsurv")
+library(condsurv)
+devtools::install_github("zabore/ezfun")
+library(ezfun)
+ezfun::set_ccf_palette("contrast")
+```
+### Explanation:
+This block ensures all necessary libraries for survival analysis and visualizations are loaded. It includes `survival` for survival modeling, `ggsurvfit` for plotting, and `gtsummary` for summary tables.
+
+```{r}
+lung <- survival::lung
+lung <- lung %>% mutate(status = recode(status, `1` = 0, `2` = 1))
+head(lung[, c("time", "status", "sex")])
+```
+### Explanation:
+The `lung` dataset is loaded, and the `status` variable is recoded to use 0 for censored cases and 1 for events (deaths). Viewing the first six rows provides an overview of the variables and their structure.
+
+## Calculating Survival Times
+
+Data often includes start and end dates rather than pre-calculated survival times. Here's how to calculate survival durations:
+
+```{r}
+date_ex <- tibble(
+  sx_date = c("2007-06-22", "2004-02-13", "2010-10-27"),
+  last_fup_date = c("2017-04-15", "2018-07-04", "2016-10-31")
+)
+date_ex <- date_ex %>% mutate(
+  sx_date = ymd(sx_date),
+  last_fup_date = ymd(last_fup_date),
+  os_yrs = as.duration(sx_date %--% last_fup_date) / dyears(1)
+)
+date_ex
+```
+### Explanation:
+This example calculates survival time in years from surgery (`sx_date`) to the last follow-up (`last_fup_date`). The `{lubridate}` package simplifies date manipulation, and survival duration (`os_yrs`) is derived using time intervals.
+
+## Kaplan-Meier Survival Analysis
+
+The Kaplan-Meier estimator provides a non-parametric method to estimate survival probabilities over time. It is commonly used to analyze right-censored survival data.
+
+```{r}
+km_fit <- survfit(Surv(time, status) ~ 1, data = lung)
+summary(km_fit)
+```
+### Explanation:
+The Kaplan-Meier model is fitted to the `lung` dataset using `survfit()`. The `summary()` output provides survival probabilities, the number of individuals at risk, and the number of events at each time point.
+
+```{r}
+km_fit %>%
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall Survival Probability",
+    title = "Kaplan-Meier Survival Curve"
+  ) +
+  add_confidence_interval() +
+  add_risktable()
+```
+### Explanation:
+This visualization shows the survival probability over time. The confidence intervals indicate the precision of the estimates, and the risk table highlights the number of patients at risk at various time points.
+
+## Cox Proportional Hazards Model
+
+The Cox model is a semi-parametric regression model used to evaluate the relationship between covariates and survival time. It assumes proportional hazards over time.
+
+```{r}
+cox_model <- coxph(Surv(time, status) ~ sex, data = lung)
+summary(cox_model)
+```
+### Explanation:
+The Cox model estimates the effect of `sex` on survival. The output includes hazard ratios (HR), confidence intervals, and p-values. A hazard ratio > 1 indicates increased risk, while < 1 indicates reduced risk compared to the reference group.
+
+```{r}
+cox_model %>% tbl_regression(exp = TRUE)
+```
+### Explanation:
+The `tbl_regression()` function generates a formatted table summarizing the Cox model results. Exponentiated coefficients (HR) help quantify the risk associated with each covariate.
+

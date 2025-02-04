@@ -1,0 +1,575 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+
+install.packages("plotly")
+library(plotly)
+
+plot_ly(iris, x = ~Sepal.Length, y = ~Sepal.Width, z = ~Petal.Length, 
+        color = ~Species, colors = c('#FF6347','#3CB371','#4682B4')) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = 'Sepal Length'),
+                      yaxis = list(title = 'Sepal Width'),
+                      zaxis = list(title = 'Petal Length')))
+
+
+
+```
+```{r}
+autoplot(pca_res, data = iris, colour = 'Species')
+```
+```{r}
+# Load iris dataset and select numeric columns
+data(iris)
+iris_numeric <- iris[, 1:4]
+
+# Perform PCA without scaling (unstandardized)
+pca_unstandardized <- prcomp(iris_numeric, scale. = FALSE)
+
+# Summary of PCA and scores
+summary(pca_unstandardized)
+pca_unstandardized$x  # PCA scores
+
+# Plot the first two principal components
+library(ggplot2)
+pca_df <- data.frame(pca_unstandardized$x, Species = iris$Species)
+ggplot(pca_df, aes(PC1, PC2, color = Species)) + geom_point() +
+  labs(title = "PCA on Iris Dataset (Unstandardized)")
+
+```
+```{r}
+# Load necessary libraries
+library(ggcorrplot)
+library(datasets)
+
+# Load Iris dataset and compute correlation matrix
+data(iris)
+corr_matrix <- cor(iris[, 1:4])  # Use only numeric columns
+
+# Create the correlogram
+ggcorrplot(corr_matrix, method = "circle", type = "full", lab = TRUE, lab_size = 3, 
+           colors = c("red", "white", "blue"), title = "Correlogram of Iris Dataset")
+
+
+
+
+```
+
+```{r}
+library(FactoMineR)
+pca_facto <- FactoMineR::PCA(iris[, 1:4])
+
+```
+```{r}
+library(ggplot2)
+library(ggfortify)
+autoplot(pca_result, data = iris, colour = 'Species',
+         loadings = TRUE, loadings.label = TRUE, loadings.label.size = 3)
+
+```
+
+```{r}
+library(factoextra)
+library(datasets)
+
+data(iris)
+pca_iris <- prcomp(iris[, 1:4], scale. = TRUE)
+fviz_eig(pca_iris, addlabels = TRUE, ylim = c(0, 50))
+
+```
+```{r}
+library(factoextra)
+library(datasets)
+
+data(iris)
+pca_iris <- prcomp(iris[, 1:4], scale. = TRUE)
+fviz_eig(pca_iris, addlabels = TRUE, ylim = c(0, 50))
+
+```
+```{r}
+# Load necessary libraries
+library(factoextra)
+library(ggplot2)
+
+# Perform PCA on the iris dataset
+data(iris)
+pca_iris <- prcomp(iris[, 1:4], scale. = TRUE)
+
+# Extract eigenvalues (variance explained by each principal component)
+eigenvalues <- pca_iris$sdev^2
+
+# Calculate individual and cumulative variance explained
+explained_variance <- (eigenvalues / sum(eigenvalues)) * 100
+cumulative_variance <- cumsum(explained_variance)
+
+# Create a data frame to combine variance and cumulative variance
+variance_data <- data.frame(
+  Principal_Component = 1:length(explained_variance),
+  Explained_Variance = explained_variance,
+  Cumulative_Variance = cumulative_variance
+)
+
+# Create a scree plot and add a cumulative variance curve
+ggplot(variance_data, aes(x = Principal_Component)) +
+  # Bar plot for individual explained variance
+  geom_bar(aes(y = Explained_Variance), stat = "identity", fill = "lightblue") +
+  # Add labels on the bars
+  geom_text(aes(y = Explained_Variance, label = round(Explained_Variance, 1)), vjust = -0.5) +
+  # Line and points for cumulative variance
+  geom_line(aes(y = Cumulative_Variance), color = "blue", size = 1.2, linetype = "dashed") +
+  geom_point(aes(y = Cumulative_Variance), color = "blue", size = 2) +
+  # Add a second y-axis label for cumulative variance
+  scale_y_continuous(sec.axis = sec_axis(~., name = "Cumulative Variance (%)")) +
+  labs(title = "Scree Plot with Cumulative Variance",
+       x = "Principal Components",
+       y = "Variance (%)") +
+  theme_minimal()
+
+
+```
+
+
+
+
+
+
+
+
+```{r}
+# Perform PCA
+pca_iris <- prcomp(iris[, 1:4], scale. = TRUE)
+
+# Get eigenvalues (squared singular values)
+eigenvalues <- pca_iris$sdev^2
+
+# Calculate the proportion of variance explained by each component
+explained_variance <- (eigenvalues / sum(eigenvalues)) * 100
+
+# Calculate the cumulative variance
+cumulated_variance <- cumsum(explained_variance)
+
+# Create a data frame to represent the eigenvalues, explained variance, and cumulated variance
+pca_table <- data.frame(
+  Component = paste0("PC", 1:length(eigenvalues)),
+  `Initial Eigenvalues` = round(eigenvalues, 3),
+  `% Variance` = round(explained_variance, 3),
+  `Cumulated Variance` = round(cumulated_variance, 3)
+)
+
+# Print the table
+print(pca_table)
+
+```
+```{r}
+# Load necessary libraries
+library(FactoMineR)
+library(factoextra)
+
+# Perform PCA using FactoMineR on the iris dataset
+res.pca_iris <- FactoMineR::PCA(iris[, 1:4], ncp = 4, scale.unit = TRUE)
+
+# Extract the factor loadings (coordinates of the variables)
+factor_loadings <- res.pca_iris$var$coord
+
+# Display the factor loadings
+print(factor_loadings)
+
+```
+```{r}
+# Load necessary libraries
+library(FactoMineR)
+library(factoextra)
+library(dplyr)
+
+# Perform PCA using FactoMineR on the iris dataset
+res.pca_iris <- FactoMineR::PCA(iris[, 1:4], ncp = 4, scale.unit = TRUE)
+
+# Extract the factor loadings (coordinates of the variables)
+factor_loadings <- res.pca_iris$var$coord
+
+# Create a table to find the variable with the strongest saturation for each principal component
+strongest_saturation <- apply(factor_loadings, 2, function(x) {
+  variable <- names(which.max(abs(x))) # Get the variable with the highest absolute loading
+  value <- max(abs(x)) # Get the value of that loading
+  return(c(variable, value))
+})
+
+# Convert to a data frame for better readability
+strongest_saturation_df <- as.data.frame(t(strongest_saturation))
+colnames(strongest_saturation_df) <- c("Variable", "Saturation")
+strongest_saturation_df
+
+# Display the strongest saturation table
+print(strongest_saturation_df)
+
+
+```
+
+```{r}
+fviz_pca_var(pca_facto, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+
+fviz_pca_var(pca_facto, col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+```
+```{r}
+# Plot individuals colored by cos² values
+fviz_pca_ind(pca_facto,
+             col.ind = "cos2",  # Color individuals by their quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE,       # Avoid text overlapping
+             pointsize = 3       # You can adjust point size
+)
+
+# Plot individuals colored by cos² values
+fviz_pca_ind(pca_facto,
+             col.ind = "contrib",  # Color individuals by their quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE,       # Avoid text overlapping
+             pointsize = 3       # You can adjust point size
+)
+
+```
+```{r}
+# Assuming pca_facto is your PCA result
+library(factoextra)
+
+# Get individuals' contributions
+pca_ind <- get_pca_ind(pca_facto)
+
+# Create a data frame with contributions to the first two axes
+contributions_df <- data.frame(Individual = rownames(pca_ind$contrib),
+                                PC1_Contribution = pca_ind$contrib[, 1],
+                                PC2_Contribution = pca_ind$contrib[, 2])
+
+# View the contributions table
+print(contributions_df)
+```
+
+```{r}
+iris_km3 <- 
+  kmeans(
+    iris_rescaled, 
+    center = 3, 
+    nstart = 20, 
+    iter.max = 10
+  )
+
+
+# And let's plot the result to compare:
+fviz_cluster(
+  iris_km3, 
+  geom = "point",        # Use points to represent each eruption
+  data = iris_rescaled,          # The data to be plotted
+  show.clust.cent = T,   # If you want to show the centroid of each cluster
+  ellipse = T            # If you want an ellipse drawn around each cluster
+) + 
+  labs(title = "Iris Data Clustered with k = 3") + 
+  
+  theme_bw() + 
+  
+  theme(legend.position = "none")
+
+```
+```{r}
+fviz_nbclust(
+  x = iris_rescaled, 
+  FUNcluster = kmeans, 
+  method ="wss", 
+  k.max=10,
+  nstart = 10
+) + 
+  
+  labs(title ="Choosing K for Iris Dataset Using WSS") + 
+  theme_bw()
+```
+
+```{r}
+# Load necessary libraries
+library(FactoMineR)
+library(factoextra)
+
+# Load the decathlon2 dataset
+data("decathlon")
+
+# Select only numeric columns for PCA (e.g., the performance scores)
+# Also, keep only the first 10 columns, which are event scores
+decathlon_data <- decathlon2[, 1:10]
+
+# Perform PCA on the data
+pca_result <- PCA(decathlon_data, graph = FALSE)
+
+# Plot the circle of correlations
+fviz_pca_var(pca_result, 
+             col.var = "cos2", # Color by quality of representation (cos2)
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), # Color gradient
+             repel = TRUE       # Avoid text overlapping
+) + 
+  labs(title = "Circle of Correlations for Decathlon Events")
+
+```
+
+```{r}
+fviz_pca_ind(pca_result,
+             col.ind = "cos2",  # Color individuals by their quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE,       # Avoid text overlapping
+             pointsize = 3       # You can adjust point size
+)
+```
+
+```{r}
+# Load necessary libraries
+library(FactoMineR)
+library(factoextra)
+
+# Perform PCA using FactoMineR on the decathlon dataset
+res.pca_decathlon <- FactoMineR::PCA(decathlon[, 1:4], ncp = 4, scale.unit = TRUE)
+
+# Extract the factor loadings (coordinates of the variables)
+factor_loadings <- res.pca_decathlon$var$coord
+
+# Display the factor loadings
+print(factor_loadings)
+
+```
+```{r}
+
+# Plot individuals on a factorial plane with bubble sizes based on quality of representation (cos2)
+fviz_pca_ind(res.pca_decathlon,
+             geom = "point",
+             pointsize = "cos2",  # Size of points related to cos2 (quality of representation)
+             palette = "jco",     # Color palette
+             repel = TRUE,        # Avoid overlapping of labels
+             addEllipses = TRUE)  # Add concentration ellipses for groups
+
+```
+```{r}
+# Load necessary libraries
+library(FactoMineR)
+library(factoextra)
+
+# Perform PCA using FactoMineR on the decathlon dataset
+res.pca_decathlon <- FactoMineR::PCA(decathlon[, 1:4], ncp = 4, scale.unit = TRUE)
+
+# Extract the factor loadings (coordinates of the variables)
+factor_loadings <- res.pca_decathlon$var$coord
+
+# Display the factor loadings
+print(factor_loadings)
+```
+```{r}
+library(dplyr)
+decathlon_rescaled <- 
+  decathlon |> 
+  select(where(is.numeric)) |>
+  select(where(~ sd(.) != 0)) |> 
+  mutate(across(everything(), ~ (. - mean(.)) / sd(.)))
+
+
+decathlonn <- 
+  kmeans(
+    decathlon_rescaled, 
+    center = 3, 
+    nstart = 20, 
+    iter.max = 10
+  )
+
+
+
+# And let's plot the result to compare:
+fviz_cluster(
+  decathlonn, 
+  geom = "point",        # Use points to represent each eruption
+  data = decathlon_rescaled,          # The data to be plotted
+  show.clust.cent = T,   # If you want to show the centroid of each cluster
+  ellipse = T            # If you want an ellipse drawn around each cluster
+) + 
+  labs(title = "Decathlon Data Clustered with k = 3") + 
+  
+  theme_bw() + 
+  
+  theme(legend.position = "none")
+```
+
+```{r}
+# Load necessary libraries
+library(cluster)
+library(dendextend)
+
+# Perform hierarchical clustering (e.g., with complete linkage)
+hc <- hclust(dist(decathlon_rescaled), method = "complete")
+
+# Convert the hclust object to a dendrogram
+dend <- as.dendrogram(hc)
+
+# Define the number of clusters you want (e.g., 3)
+k <- 4
+clusters <- cutree(hc, k = k)
+
+# Assign colors to each cluster in the dendrogram
+dend_colored <- color_branches(dend, k = k)
+
+# Plot the colored dendrogram
+plot(dend_colored, main = "Colored Dendrogram of Hierarchical Clustering", xlab = "", sub = "")
+
+# Calculate and plot silhouette scores for cluster evaluation
+silhouette_scores <- numeric()
+for (k in 2:10) {
+  clusters <- cutree(hc, k = k)
+  silhouette_scores[k] <- mean(silhouette(clusters, dist(decathlon_rescaled))[, 3])
+}
+plot(2:10, silhouette_scores[2:10], type = "b", xlab = "Number of clusters", ylab = "Average Silhouette Width")
+
+```
+When to use CA:
+CA is ideal for analyzing and visualizing the relationships between two categorical variables in a contingency table format (cross-tabulation). For example, if you have a dataset showing counts of user preferences (such as preferred activities and locations) by gender, CA helps reveal associations between categories in these variables.
+
+When to use MCA:
+MCA is an extension of CA that is used when there are more than two categorical variables. It’s particularly useful when you want to examine the relationships among multiple categorical variables simultaneously, like understanding how user characteristics in a dating app (e.g., age group, preferred dating activities, lifestyle, and personality type) interact with each other.
+
+
+```{r}
+# Load necessary libraries
+library(FactoMineR)
+library(factoextra)
+
+# Load the data
+data <- read.csv("H:/Downloads/tinder_users.db - pays.csv", header = TRUE)
+
+# Subset only the desired columns for PCA
+selected_vars <- data[, c("score", "n.matches", "n.updates.photo", "n.photos")]
+
+head(data)
+
+# Check the structure of the selected variables
+str(selected_vars)
+
+# PCA on the selected variables
+pca_result2 <- PCA(selected_vars, graph = FALSE)
+
+# Visualize PCA results
+fviz_pca_var(pca_result2, col.var = "cos2", # Color by quality of representation (cos2)
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), # Color gradient
+             title = "PCA - Selected Variables", repel = TRUE)
+
+
+
+```
+
+```{r}
+library(FactoMineR)
+library(factoextra)
+selected_vars2 <- data[, c("Country", "gender", "voyage", "laugh", "photo.elevator", "photo.beach")]
+selected_vars2 <- data.frame(lapply(selected_vars2, as.factor))
+str(selected_vars2)
+apply(selected_vars2, 2, function(x) nlevels(as.factor(x)))
+YES = apply(selected_vars2, 2, function(x) nlevels(as.factor(x)))
+mca1 = MCA(selected_vars2, graph = FALSE)
+
+mca1_vars_df = data.frame(mca1$var$coord, Variable = rep(names(YES), 
+    YES))
+mca1_obs_df = data.frame(mca1$ind$coord)
+ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2, label = rownames(mca1_vars_df))) + 
+    geom_hline(yintercept = 0, colour = "gray70") + geom_vline(xintercept = 0, 
+    colour = "gray70") + geom_text(aes(colour = Variable)) + ggtitle("MCA plot of variables using R package FactoMineR")
+
+
+```
+
+```{r}
+library(FactoMineR)
+library(factoextra)
+selected_vars2 <- data[, c("gender", "voyage", "laugh", "photo.elevator", "photo.beach")]
+selected_vars2 <- data.frame(lapply(selected_vars2, as.factor))
+str(selected_vars2)
+apply(selected_vars2, 2, function(x) nlevels(as.factor(x)))
+YES = apply(selected_vars2, 2, function(x) nlevels(as.factor(x)))
+mca1 = MCA(selected_vars2, graph = FALSE)
+
+mca1_vars_df = data.frame(mca1$var$coord, Variable = rep(names(YES), 
+    YES))
+mca1_obs_df = data.frame(mca1$ind$coord)
+ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2, label = rownames(mca1_vars_df))) + 
+    geom_hline(yintercept = 0, colour = "gray70") + geom_vline(xintercept = 0, 
+    colour = "gray70") + geom_text(aes(colour = Variable)) + ggtitle("MCA plot of variables using R package FactoMineR")
+```
+```{r}
+# Load necessary libraries
+library(FactoMineR)
+library(factoextra)
+
+
+# Extract the factor loadings (coordinates of the variables)
+factor_loadings2 <- pca_result2$var$coord
+
+# Display the factor loadings
+print(factor_loadings2)
+```
+```{r}
+# Load necessary libraries
+library(FactoMineR)
+library(factoextra)
+
+
+# Extract the factor loadings (coordinates of the variables)
+factor_loadings3 <- mca1$var$coord
+
+# Display the factor loadings
+print(factor_loadings3)
+```
+```{r}
+library(dplyr)
+data_rescaled <- 
+  data |> 
+  select(where(is.numeric)) |>
+  select(where(~ sd(.) != 0)) |> 
+  mutate(across(everything(), ~ (. - mean(.)) / sd(.)))
+
+
+woohoo <- 
+  kmeans(
+    data_rescaled, 
+    center = 3, 
+    nstart = 20, 
+    iter.max = 10
+  )
+
+
+
+# And let's plot the result to compare:
+fviz_cluster(
+  woohoo, 
+  geom = "point",        # Use points to represent each eruption
+  data = data_rescaled,          # The data to be plotted
+  show.clust.cent = T,   # If you want to show the centroid of each cluster
+  ellipse = T            # If you want an ellipse drawn around each cluster
+) + 
+  labs(title = "Tinder Data Clustered with k = 3") + 
+  
+  theme_bw() + 
+  
+  theme(legend.position = "none")
+```
+
+
+
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

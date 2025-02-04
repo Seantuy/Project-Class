@@ -1,0 +1,257 @@
+---
+title: "Probability and distributions"
+author: "Thanos Manos"
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+  html_document: default
+  word_document: default
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(message=FALSE, echo = TRUE, tidy.opts=list(width.cutoff=60)) 
+```
+
+The concepts of randomness and probability are central to statistics. It is an empirical fact that most experiments and investigations are not perfectly reproducible. The degree of irreproducibility may vary: Some experiments in physics may yield data that are accurate to many decimal places, whereas data on biological systems are typically much less reliable. However, the view of data as something coming from a statistical distribution is vital to understanding statistical methods. In this section, we outline the basic ideas of probability and the functions that R has for random sampling and handling of theoretical distributions.
+
+## Random sampling
+Much of the earliest work in probability theory was about games and gambling issues, based on symmetry considerations. The basic notion then is that of a random sample: dealing from a well-shuffled pack of cards or picking numbered balls from a well-stirred turn. In R, you can simulate these situations with the sample function. If you want to pick **five (5)** numbers at random from the set $1:40$, then you can write:
+
+```{r}
+sample(1:40,5)
+```
+
+The first argument $(x)$ is a vector of values to be sampled and the second (size) is the sample size. Actually, **sample(40,5)** would suffice since a single number is interpreted to represent the length of a sequence of integers. 
+
+Notice that the **default** behaviour of sample is **sampling without replacement**. That is, **the samples will not contain the same number twice**, and size obviously cannot be bigger than the length of the vector to be sampled. If you want sampling with replacement, then you need to add the argument replace=TRUE.
+
+Sampling with replacement is suitable for modelling coin tosses or throws of a die. So, for instance, to **simulate 10 coin tosses** we could write:
+
+```{r}
+sample(c("H","T"), 10, replace=T)
+```
+
+In fair coin-tossing, the probability of heads should equal the probability of tails, but the idea of a random event is not restricted to symmetric cases. It could be equally well applied to other cases, such as the successful outcome of a surgical procedure. Hopefully, there would be a better than $50\%$ chance of this. You can **simulate data with nonequal probabilities** for the outcomes (say, a $90\%$ chance of success) by using the prob argument to sample, as in:
+
+```{r}
+sample(c("succ", "fail"), 10, replace=T, prob=c(0.9, 0.1))
+```
+This may not be the best way to generate such a sample, though.
+
+## Probability calculations and combinatorics
+
+Let us return to the case of sampling without replacement, specifically **sample(1:40, 5)**. The probability of obtaining a given number as the first one of the sample should be $1/40$, the next one $1/39$, and so forth. The probability of a given sample should then be $1/(40 \times  39 \times  38 \times  37 \times  36)$. In R, use the **prod** function, which calculates the **product** of a vector of numbers:
+
+```{r}
+1/prod(40:36)
+```
+However, notice that this is the probability of getting given numbers in a given order. If this were a Lotto-like game, then you would rather be interested in the probability of guessing a given set of five numbers correctly. Thus you need also to include the cases that give the same numbers in a different order. Since obviously the probability of each such case is going to be the same, all we need to do is to figure out how many such cases there are and multiply by that. There are five possibilities for the first number, and for each of these there are four possibilities for the second, and so forth; that is, the number is $5 \times  4 \times  3 \times  2 \times  1$. This number is also written as $5!$ (5 factorial). So the probability of a "winning Lotto coupon" would be:
+
+```{r}
+prod(5:1)/prod(40:36)
+```
+
+There is another way of arriving at the same result. Notice that since the actual set of numbers is immaterial, all sets of five numbers must have the same probability. So all we need to do is to calculate the number of ways to choose 5 numbers out of 40. This is denoted:
+$$ \binom{40}{5} =\frac{40!}{5!35!}=658008$$
+
+In R, the **choose** function can be used to calculate this number, and the probability is thus:
+```{r}
+choose(40,5)
+```
+
+## Discrete distributions
+
+When looking at **independent replications of a binary experiment**, you would not usually be interested in whether each case is a success or a failure but rather in the total number of successes (or failures). Obviously, this number is random since it depends on the individual random outcomes, and it is consequently called a random variable. In this case it is a  discrete-valued random variable that can take values $0, 1,...,n$, where $n$ is the number of replications. Continuous random variables are encountered later. A random variable $X$ has a probability distribution that can be described using point probabilities $f(x) = P(X = x)$ or the cumulative distribution function $F(x) = P(X \leq x)$. In the case at hand, the distribution can be worked out as having the point probabilities:
+
+$$ f(x)=\binom{n}{x}p^x(1-p)^{n-x}$$
+
+This is known as the **binomial distribution**, and the $\binom{n}{x}$ are known as binomial coefficients. The parameter $p$ is the probability of a successful outcome in an individual trial. A graph of the point probabilities of the binomial distribution appears in Figure ahead. 
+
+We delay describing the R functions related to the binomial distribution until we have discussed continuous distributions so that we can present the conventions in a unified manner.
+
+Many other distributions can be derived from simple probability models. For instance, the geometric distribution is similar to the binomial distribution but records the number of failures that occur before the first success.
+
+## Continuous distributions
+
+Some data arise from **measurements on an essentially continuous scale**, for instance temperature, concentrations, etc. In practice, they will be recorded to a finite precision, but it is useful to disregard this in the modelling. Such measurements will usually have a component of random variation, which makes them less than perfectly reproducible. However, these random fluctuations will tend to **follow patterns**; typically they will cluster around a central value, with large deviations being more rare than smaller ones.
+
+In order to model continuous data, we need to define random variables that can obtain the value of any real number. Because there are infinitely many numbers infinitely close, the probability of any particular value will be zero, so there is no such thing as a point probability as for discrete valued random variables. Instead we have the concept of a **density**. This is the **infinitesimal probability of hitting a small region around $x$ divided by the size of the region**. The **cumulative distribution function** can be defined as before, and we have the relation:
+
+$$ F(x) = \int_{-\infty}^{x}f(x)dx$$
+There are a number of standard distributions that come up in statistical theory and are available in R. It makes little sense to describe them in detail here except for a couple of examples.
+
+The **uniform distribution** has a constant density over a specified interval (by default $[0, 1]$). The **normal distribution** (also known as the **Gaussian distribution**) has density:
+
+$$f(x)=\frac{1}{\sqrt{2\pi}\sigma}\exp[-\frac{(x-\mu)^2}{2\sigma^2}]$$
+depending on its mean $\mu$ and standard deviation $\sigma$. The normal distribution has a characteristic **bell shape**, and modifying $\mu$ and $\sigma$ simply translates and widens the distribution. It is a standard building block in statistical models, where it is commonly used to describe error variation. It also comes up as an approximating distribution in several contexts; for instance, the binomial distribution for large sample sizes can be well approximated by a suitably scaled normal distribution.
+
+## The built-in distributions in R
+
+The standard distributions that turn up in connection with model building and statistical tests have been built into R, and it can therefore completely replace traditional statistical tables. Here we look only at the normal distribution and the binomial distribution, but other distributions follow exactly the same pattern.
+
+Four fundamental items can be calculated for a statistical distribution:
+
+* Density or point probability
+
+* Cumulated probability, distribution function
+
+* Pseudo-random numbers
+
+* Quantiles
+
+For all distributions implemented in R, there is a function for each of the items listed above. For example, for the normal distribution, these are named dnorm, pnorm, qnorm, and rnorm (density, probability, quantiles and random, respectively).
+
+### Densities
+
+The density for a continuous distribution is a measure of the **relative probability of 'getting a value close to x**. The probability of getting a value in a particular interval is the area under the corresponding part of the curve.
+
+For discrete distributions, the term 'density' is used for the point probability of getting exactly the value $x$. Technically, this is correct: It is a density with respect to counting measure.
+
+The density function is likely the one of the four function types that is least used in practice, but if for instance it is desired to draw the well-known bell curve of the normal distribution, then it can be done like this:
+
+```{r}
+x<- seq(-4,4,0.1)
+plot(x,dnorm(x),type="l")
+```
+
+**Notice that this is the letter "l", not the digit "1".**
+
+The function **seq** is used to generate equidistant values, here from -4 to 4 in steps of 0.1, that is, (-4.0,-3.9,-3.8, ... , 3.9, 4.0).The use of type ="l" as an argument to plot causes the "function" to draw lines between the points rather than plotting the points themselves. An alternative way of creating the plot is to use curve as follows:
+
+```{r}
+curve(dnorm(x), from=-4, to=4)
+```
+
+This is often a more convenient way of making graphs, but it does require that the y-values can be expressed as a simple functional expression in x. For discrete distributions, where variables can take on only distinct values, it is preferable to draw a **pin diagram**, here for the binomial distribution with $n = 50$ and $p = 0.33$:
+
+```{r}
+x <- 0:50
+plot(x,dbinom(x,size=50,prob=.33),type="h")
+```
+
+Notice that there are three arguments to the **d-function** this time. In addition to $x$, you have to specify the number of trials n and the probability parameter $p$. The distribution drawn corresponds to, for example, the number of 5s or 6s in 50 throws of a symmetrical die. Actually, **dnorm** also takes more than one argument, namely the mean and standard deviation, but they have default values of 0 and 1, respectively, since most often it is the standard normal distribution that is requested.
+
+The form 0:50 is a short version of **seq(0,50,1)**: the whole numbers from 0 to 50. It is type="h" (as in histogram-like) that causes the pins to be drawn.
+
+### Cumulative distribution functions
+
+The cumulative distribution function describes the **probability of 'hitting' x or less in a given distribution**. The corresponding R functions begin with a $p$ (for probability) by convention.
+
+Just as you can plot densities, you can of course also plot cumulative distribution functions, but that is usually not very informative. More often, actual numbers are desired. Say that it is known that some biochemical measure in healthy individuals is well described by a normal distribution with a mean of 132 and a standard deviation of 13. Then, if a patient has a value of 160, there is:
+```{r}
+1-pnorm(160,mean=132,sd=13)
+```
+
+or **only about 1.5% of the general population, that has that value or higher**. The function **pnorm** returns the probability of getting a value smaller than its first argument in a normal distribution with the given mean and standard deviation.
+
+Another typical application occurs in connection with **statistical tests**. 
+
+Consider a simple sign test: **Twenty patients are given two treatments each (blindly and in randomized order) and then asked whether treatment A or B worked better. It turned out that 16 patients liked A better.** 
+
+* The question is then whether this can be taken as **sufficient evidence** that A actually is the **better treatment** or whether the **outcome might as well have happened by chance** even if the treatments were equally good. 
+
+* **If there was no difference between the two treatments**, then we would expect the number of people favouring treatment A to be **binomially distributed** with $p = 0.5$ and $n = 20$. 
+
+* How (im)probable would it then be to obtain what we have observed? 
+
+* As in the normal distribution, we need a **tail probability** and the immediate guess might be to look at:
+
+```{r}
+pbinom(16,size=20,prob=.5)
+```
+and subtract it from 1 to get the upper tail but this would be an error! What we need is the probability of the observed or more extreme, and *pbinom* is giving the probability of 16 or less. We need to use '15 or less' instead.
+```{r}
+1-pbinom(15,size=20,prob=.5)
+```
+
+### Random numbers
+
+To many people, it sounds like a **contradiction** in terms to generate random numbers on a computer since its **results are supposed to be predictable and reproducible**. What is in fact possible is to generate sequences of **pseudo-random** numbers, which for practical purposes behave **as if they were drawn randomly**. 
+
+Here random numbers are used to give the reader a feeling for the way in which randomness affects the quantities that can be calculated from a set of data. In professional statistics, they are used to create simulated data sets in order to study the accuracy of mathematical approximations and the effect of assumptions being violated. 
+
+The use of the functions that generate random numbers is straightforward. The first argument specifies the number of random numbers to compute, and the subsequent arguments are similar to those for other functions related to the same distributions. For instance:
+
+```{r}
+rnorm(10)
+```
+```{r}
+rnorm(10)
+```
+```{r}
+rnorm(10,mean=7,sd=5)
+```
+```{r}
+rbinom(10,size=20,prob=.5)
+```
+
+### Selecting random number of rows from a data frame
+
+See for example:
+
+```{r echo=T, eval=F}
+?sample
+```
+
+Using the **iris** dataset in R, one can select:
+
+* 2 random rows in the following way
+```{r}
+iris[sample(nrow(iris), 2),]
+```
+
+* 5 random rows in the following way
+```{r}
+iris[sample(nrow(iris), 5),]
+```
+
+
+### Quantiles
+
+The quantile function is the inverse of the cumulative distribution function. The $p-$quantile is the value with the property that there is probability p of getting a value less than or equal to it. The median is by definition the $50\%$ quantile.
+
+Some details concerning the definition in the case of discontinuous distributions are glossed over here. You can fairly easily deduce the behaviour by experimenting with the R functions.
+
+Tables of statistical distributions are almost always given in terms of quantiles. For a fixed set of probabilities, the table shows the boundary that a test statistic must cross in order to be considered significant at that level. This is purely for operational reasons; it is almost superfluous when you have the option of computing $p$ exactly.
+
+Theoretical quantiles are commonly used for the calculation of confidence intervals and for power calculations in connection with designing and dimensioning experiments. A simple example of a confidence interval can be given here. If we have n normally distributed observations with the same mean $\mu$ and standard deviation $\sigma$, then it is known that the average $\bar{X}$ is normally distributed around $\mu$ with standard deviation $\sigma/ \sqrt{n}$. A $95\%$ confidence interval for $\mu$ can be obtained as:
+
+$$\bar{X}+\sigma/ \sqrt{n} \times N_{0.025} \le \mu \le \bar{X}+\sigma \sqrt{n} \times N_{0.975}$$
+where $N_{0.025}$ is the $2.5%$ quantile in the normal distribution. If $\sigma=12$ and we have measured $n=5$ persons and found an average of $\bar{X}=83$, then we can compute the relevant quantities as (**sem means standard error of the mean**):
+
+```{r}
+xbar <- 83
+sigma <- 12
+n <- 5
+sem <- sigma/sqrt(n)
+sem
+xbar + sem * qnorm(0.025)
+xbar + sem * qnorm(0.975)
+```
+
+and thus find a $95\%$ confidence interval for $\mu$ going from 72.48 to 93.52. (Notice that this is based on the assumption that $\sigma$ is known. This is sometimes reasonable in process control applications. The more common case of estimating $\sigma$ from the data leads to confidence intervals based on the $t-$distribution and is discussed later.)
+
+Since it is known that the normal distribution is symmetric, so that $N_{0.025}=-N_{0.975}$, it is common to write the formula for the confidence interval as:
+$$\bar{X} \pm \sigma/ \sqrt{n} \times N_{0.975}$$
+
+The quantile itself is often written $\Phi^{-1}(0.975)$, where $\Phi$ is standard notation for the cumulative distribution function of the normal distribution (pnorm). Another application of quantiles is in connection with Q-Q plots (we will see it soon), which can be used to assess whether a set of data can reasonably be assumed to come from a given distribution.
+
+
+### Q-Q Plots
+
+One purpose of calculating the empirical cumulative distribution function (CDF) is to see whether data can be assumed normally distributed. For might plot the $k-$th smallest observation against the expected value of the $k-$th smallest observation out of $n$ in a standard normal distribution. The point is that in this way you would expect to obtain a straight line if data come from a normal distribution with any mean and standard deviation.
+
+```{r}
+x <- rnorm(50)
+```
+
+Creating such a plot is slightly complicated. Fortunately, there is a built-in function for doing it, qqnorm. The result of using it can be seen in the following Figure. You only have to write:
+
+```{r}
+qqnorm(x)
+```
+
+As the title of the plot indicates, plots of this kind are also called "Q-Q" plots (**quantile versus quantile**). Notice that $x$ and $y$ are interchanged relative to the empirical CDF the observed values are now drawn along the $y-$axis. You should notice that with this convention the distribution has heavy tails if the outer parts of the curve are steeper than the middle part.
+
+Some readers will have been taught "probability plots", which are similar but have the axes interchanged. It can be argued that the way R draws the plot is the better one since the theoretical quantiles are known in advance, while the empirical quantiles depend on data. You would normally choose to draw fixed values horizontally and variable values vertically.

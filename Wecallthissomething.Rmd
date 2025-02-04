@@ -1,0 +1,172 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Load Libraries
+```{r}
+# Load the necessary libraries
+library(TraMineRextras)
+library(tidyverse)
+library(stringr)
+library(ngram)
+library(TraMineR)
+library(tidytext)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## Read and Process Data
+```{r}
+# Read the CSV file
+messages <- read.csv("H:/Downloads/messages.db.csv")
+
+# Preview the data
+head(messages)
+```
+
+## Simple Motif Extraction with N-grams
+```{r}
+# Combine messages into sequences for each conversation
+conversation_sequences <- messages %>%
+  group_by(conversationid) %>%
+  arrange(rank) %>%
+  summarise(sequence = paste(message.type, collapse = " ")) %>%
+  ungroup()
+
+# Create trigrams
+trigrams <- conversation_sequences %>%
+  unnest_tokens(trigram, sequence, token = "ngrams", n = 3)
+
+# Count frequencies of trigrams
+trigram_freq <- trigrams %>%
+  count(trigram, sort = TRUE)
+
+# View the top trigrams
+head(trigram_freq)
+
+```
+
+
+
+
+
+
+
+## Represent Sequence Data
+```{r}
+# Compute rank.inv if not already present
+if (!"rank.inv" %in% colnames(messages)) {
+  messages <- messages %>%
+    group_by(conversationid) %>%
+    mutate(rank.inv = max(rank) - rank + 1) %>%
+    ungroup()
+}
+
+# Filter for the last six messages
+last_six <- messages %>%
+  group_by(conversationid) %>%
+  arrange(rank.inv) %>%
+  slice_tail(n = 6) %>%
+  ungroup()
+
+# Check the last six messages dataset
+print(head(last_six %>% arrange(conversationid, rank.inv)))
+
+```
+
+## Reshape and Create Sequence Object
+```{r}
+# Ensure last six messages per conversation
+last_six <- messages %>%
+  group_by(conversationid) %>%
+  arrange(rank.inv) %>%
+  slice_head(n = 6) %>%
+  ungroup()
+
+# Replace only truly missing values with a placeholder
+last_six[is.na(last_six$message.type), "message.type"] <- "missing"
+
+# Reshape to wide format for TraMineRextras
+seq_data_wide <- last_six %>%
+  select(conversationid, rank.inv, message.type) %>%
+  spread(key = rank.inv, value = message.type) %>%
+  arrange(conversationid)
+
+# Replace NAs (missing messages) with a placeholder (e.g., "missing")
+seq_data_wide[is.na(seq_data_wide)] <- "missing"
+
+```
+
+## Create Sequence Object
+```{r}
+# Convert to a sequence object
+seq_obj <- seqdef(seq_data_wide %>% select(-conversationid),
+                  alphabet = c("aff.nor", "aff.off", "chunk", "end", "phone", "piss.off", "questn", "missing"),
+                  states = c("aff.nor", "aff.off", "chunk", "end", "phone", "piss.off", "questn", "missing"),
+                  labels = c("Normal Affirmative", "Offensive Affirmative", "Chunk", "End", "Phone Exchange",
+                             "Piss Off", "Question", "Missing"))
+```
+
+## Sequence Analysis with TraMineRextras
+```{r}
+# Summary of the sequence object
+summary(seq_obj)
+
+# Visualize sequences with TraMineRextras
+# State distribution plot
+seqdplot(seq_obj, with.legend = TRUE, border = NA)
+
+# Sequence frequency plot
+seqfplot(seq_obj, with.legend = TRUE, border = NA)
+
+```
+
+
+```{r}
+# Filter for the last 6 messages (inverse.rank 1 to 6) and arrange them
+last_six_messages <- messages %>%
+  filter(inverse.rank %in% 1:6) %>%
+  arrange(conversationid, inverse.rank) %>%
+  select(conversationid, inverse.rank, message.type)
+
+# Ensure each conversation has exactly 6 rows, corresponding to inverse.rank 1 to 6
+last_six_messages <- last_six_messages %>%
+  group_by(conversationid) %>%
+  filter(n() == 6) %>%
+  ungroup()
+
+# Pivot the data to make each conversationid a row and each inverse.rank a column
+message_matrix <- last_six_messages %>%
+  spread(key = inverse.rank, value = message.type) %>%
+  arrange(conversationid)
+
+# Reorder columns explicitly by inverse.rank (6 to 1)
+message_matrix <- message_matrix %>%
+  select(conversationid, `6`, `5`, `4`, `3`, `2`, `1`)  # Explicitly reorder columns by inverse.rank
+
+# View the resulting reshaped data
+print(message_matrix)
+
+# Gather the data back to long format, making sure to keep conversationid
+message_matrix_long <- message_matrix %>%
+  gather(key = "inverse.rank", value = "message.type", -conversationid) %>%
+  mutate(inverse.rank = factor(inverse.rank, levels = c("6", "5", "4", "3", "2", "1"))) %>%
+  arrange(conversationid, inverse.rank)
+
+# View the resulting long data
+print(message_matrix_long)
+
+# Plot the heatmap-like plot with proper colors for message.type
+ggplot(message_matrix_long, aes(x = inverse.rank, y = as.factor(conversationid), fill = message.type)) +
+  geom_tile() +
+  scale_fill_manual(values = c("aff.nor" = "blue", "questn" = "red", "chunk" = "green", 
+                               "phone" = "purple", "aff.off" = "orange", "piss.off" = "yellow", 
+                               "end" = "pink")) +
+  labs(x = "Inverse Rank", y = "Conversation ID", title = "Message Types in the Last 6 Messages") +
+  theme_minimal() +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())  # Clean up y-axis labels
+
+```
+

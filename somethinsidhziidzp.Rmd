@@ -1,0 +1,1219 @@
+```{r}
+# Load required libraries
+library(igraph)
+library(ggplot2)
+library(gganimate)
+
+# Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+data <- read.csv(file_path, stringsAsFactors = FALSE, fileEncoding = "latin1")
+
+# Filter for external members only
+external_members <- subset(data, status == "externe")
+
+# Select relevant columns for the edge list
+edge_list <- external_members[, c("Name", "institutions", "year")]
+
+# Remove rows with missing values
+edge_list_cleaned <- na.omit(edge_list)
+
+# Create a function to generate graphs for each year
+create_graph <- function(year, edge_list) {
+  # Filter data for the specified year
+  year_data <- subset(edge_list, year == year)
+
+  # Create a graph object
+  g <- graph_from_data_frame(d = year_data, directed = FALSE)
+
+  # Return the graph
+  return(g)
+}
+
+# Generate graphs for each year
+years <- 2017:2020
+graphs <- lapply(years, create_graph, edge_list = edge_list_cleaned)
+
+# Create a data frame for plotting and animation
+plot_data <- do.call(rbind, lapply(1:length(years), function(i) {
+  g <- graphs[[i]]
+  year <- years[i]
+  coords <- layout_with_fr(g)
+  data.frame(
+    x = coords[, 1],
+    y = coords[, 2],
+    name = V(g)$name,
+    year = year
+  )
+}))
+
+# Plot and animate the graphs
+p <- ggplot(plot_data, aes(x = x, y = y, label = name, color = as.factor(year))) +
+  geom_point(size = 3) +
+  geom_text(aes(label = name), vjust = 1, hjust = 1, size = 3) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  ggtitle("Graph Evolution by Year") +
+  transition_states(year, transition_length = 2, state_length = 1) +
+  ease_aes('linear')
+
+# Save the animation
+anim <- animate(p, nframes = 200, fps = 10, width = 800, height = 600)
+anim_save("graph_evolution.gif", animation = anim)
+
+```
+```{r}
+# Load necessary packages
+required_packages <- c("igraph", "animation")
+
+# Install missing packages
+missing_packages <- setdiff(required_packages, installed.packages()[, "Package"])
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+
+# Load the packages
+lapply(required_packages, library, character.only = TRUE)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Inspect the dataset
+head(df)
+summary(df)
+
+# Step 3: Filter the data for external members
+external_df <- subset(df, status == "externe")
+
+# Define the years to analyze
+years <- c(2017, 2018, 2019, 2020)
+
+# Step 4: Create edges function
+create_edges <- function(data) {
+  # Group by institution and create edges only for groups with more than one member
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  
+  # Remove NULL entries and combine matrices
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+  
+  return(edge_list)
+}
+
+# Step 5: Generate graphs and save as a GIF
+saveGIF({
+  for (year in years) {
+    year_df <- subset(external_df, year == year)  # Filter data by year
+    
+    # Create edges
+    edges <- create_edges(year_df)
+    
+    # Skip years with no edges
+    if (is.null(edges) || nrow(edges) == 0) {
+      print(paste("No edges for year", year))
+      next
+    }
+    
+    # Create graph
+    g <- graph_from_edgelist(edges, directed = FALSE)
+    
+    # Plot graph
+    plot(
+      g,
+      vertex.label = NA,              # Remove node labels
+      vertex.size = 5,                # Adjust node size
+      edge.color = "gray",            # Edge color
+      main = paste("External Members -", year)
+    )
+  }
+}, movie.name = "external_memberssjisdjis.gif", interval = 1, ani.width = 600, ani.height = 600)
+
+```
+```{r}
+# Load necessary packages
+required_packages <- c("igraph", "magick")
+missing_packages <- setdiff(required_packages, installed.packages()[, "Package"])
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+lapply(required_packages, library, character.only = TRUE)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Inspect the dataset
+head(df)
+summary(df)
+
+# Step 3: Filter the data for external members
+external_df <- subset(df, status == "externe")
+
+# Define the years to analyze
+years <- c(2017, 2018, 2019, 2020)
+
+# Step 4: Create edges function
+create_edges <- function(data) {
+  # Group by institution and create edges only for groups with more than one member
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  
+  # Remove NULL entries and combine matrices
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+  
+  return(edge_list)
+}
+
+# Step 5: Generate graphs and create GIF with magick
+frames <- image_graph(width = 600, height = 600, res = 96) # Initialize image capture
+for (year in years) {
+  year_df <- subset(external_df, year == year)  # Filter data by year
+  
+  # Create edges
+  edges <- create_edges(year_df)
+  
+  # Skip years with no edges
+  if (is.null(edges) || nrow(edges) == 0) {
+    print(paste("No edges for year", year))
+    next
+  }
+  
+  # Create graph
+  g <- graph_from_edgelist(edges, directed = FALSE)
+  
+  # Plot graph
+  plot(
+    g,
+    vertex.label = NA,              # Remove node labels
+    vertex.size = 5,                # Adjust node size
+    edge.color = "gray",            # Edge color
+    main = paste("External Members -", year)
+  )
+}
+dev.off() # End image capture
+
+# Combine frames into a GIF
+animation <- image_animate(frames, fps = 1)  # Create animation at 1 frame per second
+image_write(animation, "external_members_animation.gif")  # Save the animation
+
+```
+```{r}
+# Load necessary packages
+library(igraph)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"  # Replace with your actual file path
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Filter the data for external members
+external_df <- subset(df, status == "externe")
+
+# Define the year to analyze (e.g., 2019)
+selected_year <- 2019
+year_df <- subset(external_df, year == selected_year)  # Filter data for the selected year
+
+# Check data
+if (nrow(year_df) == 0) stop(paste("No data for year", selected_year))
+
+# Step 3: Create edges function
+create_edges <- function(data) {
+  # Group by institution and create edges for groups with more than one member
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  # Remove NULL entries and combine matrices
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+  return(edge_list)
+}
+
+# Create edges
+edges <- create_edges(year_df)
+
+# Ensure all nodes are included (even isolated ones)
+all_nodes <- unique(year_df$Name)  # Extract all unique names
+if (is.null(edges) || nrow(edges) == 0) {
+  g <- make_empty_graph(n = length(all_nodes), directed = FALSE) %>%
+    set_vertex_attr(name = "name", value = all_nodes)
+} else {
+  g <- graph_from_data_frame(d = edges, vertices = all_nodes, directed = FALSE)
+}
+
+# Step 4: Apply community detection (Louvain method)
+communities <- cluster_louvain(g)
+
+# Step 5: Plot the graph with communities
+plot(
+  g,
+  vertex.color = membership(communities),  # Color nodes by community
+  vertex.label = NA,                       # Remove node labels
+  vertex.size = 5,                         # Adjust node size
+  edge.color = "gray",                     # Edge color
+  main = paste("Communities in External Members -", selected_year)
+)
+
+# Step 6: Print summary of communities
+cat("Number of communities detected:", length(communities), "\n")
+cat("Sizes of communities:", sizes(communities), "\n")
+
+```
+
+
+```{r}
+# Load necessary packages
+required_packages <- c("igraph", "animation")
+
+# Install missing packages
+missing_packages <- setdiff(required_packages, installed.packages()[, "Package"])
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+
+# Load the packages
+lapply(required_packages, library, character.only = TRUE)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Inspect the dataset
+head(df)
+summary(df)
+
+# Step 3: Filter the data for external members
+external_df <- subset(df, status == "externe")
+
+# Define the years to analyze
+years <- c(2017, 2018, 2019, 2020)
+
+# Step 4: Create edges function
+create_edges <- function(data) {
+  # Group by institution and create edges only for groups with more than one member
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  
+  # Remove NULL entries and combine matrices
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+  
+  return(edge_list)
+}
+
+# Step 5: Generate graphs and apply community detection
+saveGIF({
+  for (year in years) {
+    year_df <- subset(external_df, year == year)  # Filter data by year
+    
+    # Create edges
+    edges <- create_edges(year_df)
+    
+    # Skip years with no edges
+    if (is.null(edges) || nrow(edges) == 0) {
+      print(paste("No edges for year", year))
+      next
+    }
+    
+    # Create graph
+    g <- graph_from_edgelist(edges, directed = FALSE)
+    
+    # Apply Louvain community detection
+    community <- cluster_louvain(g)
+    
+    # Plot graph with community detection results
+    plot(
+      community, g, 
+      vertex.label = NA,              # Remove node labels
+      vertex.size = 5,                # Adjust node size
+      edge.color = "gray",            # Edge color
+      main = paste("Communities in External Members -", year),
+      vertex.color = membership(community)  # Color by community membership
+    )
+  }
+}, movie.name = "external_members_community_detection.gif", interval = 1, ani.width = 600, ani.height = 600)
+
+```
+```{r}
+# Step 6: Pool all years together and create a graph
+# Combine data for all years
+pooled_edges <- create_edges(external_df)
+
+# Check if there are edges to plot
+if (!is.null(pooled_edges) && nrow(pooled_edges) > 0) {
+  # Create graph
+  g_pooled <- graph_from_edgelist(pooled_edges, directed = FALSE)
+  
+  # Apply Louvain community detection for the pooled graph
+  community_pooled <- cluster_louvain(g_pooled)
+  
+  # Plot graph
+  plot(
+    community_pooled, g_pooled, 
+    vertex.label = NA,                # Remove node labels
+    vertex.size = 5,                  # Adjust node size
+    edge.color = "gray",              # Edge color
+    main = "Communities in External Members - All Years Pooled",
+    vertex.color = membership(community_pooled)  # Color by community membership
+  )
+} else {
+  print("No edges found for pooled external members.")
+}
+
+```
+```{r}
+# Load necessary libraries
+required_packages <- c("igraph", "dplyr", "ggplot2")
+missing_packages <- setdiff(required_packages, installed.packages()[, "Package"])
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+lapply(required_packages, library, character.only = TRUE)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Filter the data for external members
+external_df <- df %>% filter(status == "externe")
+
+# Step 3: Create edges
+create_edges <- function(data) {
+  # Group by institution and create edges only for groups with more than one member
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+
+  # Remove NULL entries and combine matrices
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+
+  return(edge_list)
+}
+
+# Create edges for the graph
+edges <- create_edges(external_df)
+
+# Step 4: Build the graph
+g <- graph_from_edgelist(edges, directed = FALSE)
+
+# Step 5: Calculate centrality indicators
+# Degree centrality
+degree_vals <- degree(g)
+# Strength centrality (weighted degree)
+strength_vals <- strength(g)
+# Betweenness centrality
+betweenness_vals <- betweenness(g)
+
+# Combine centrality measures into a data frame
+centrality_df <- data.frame(
+  Name = V(g)$name,
+  Degree = degree_vals,
+  Strength = strength_vals,
+  Betweenness = betweenness_vals
+)
+
+# Step 6: Identify top ten members per indicator
+top_degree <- centrality_df %>% arrange(desc(Degree)) %>% head(10)
+top_strength <- centrality_df %>% arrange(desc(Strength)) %>% head(10)
+top_betweenness <- centrality_df %>% arrange(desc(Betweenness)) %>% head(10)
+
+# Print tables
+cat("Top 10 by Degree:\n")
+print(top_degree)
+cat("\nTop 10 by Strength:\n")
+print(top_strength)
+cat("\nTop 10 by Betweenness:\n")
+print(top_betweenness)
+
+# Step 7: Plot the graph with node size proportional to centrality indicators
+# Plot for Degree
+plot(
+  g,
+  vertex.size = degree_vals / max(degree_vals) * 10,  # Scale node size
+  vertex.label = NA,
+  edge.color = "gray",
+  main = "Graph with Node Size by Degree"
+)
+
+# Plot for Strength
+plot(
+  g,
+  vertex.size = strength_vals / max(strength_vals) * 10,  # Scale node size
+  vertex.label = NA,
+  edge.color = "gray",
+  main = "Graph with Node Size by Strength"
+)
+
+# Plot for Betweenness
+plot(
+  g,
+  vertex.size = betweenness_vals / max(betweenness_vals) * 10,  # Scale node size
+  vertex.label = NA,
+  edge.color = "gray",
+  main = "Graph with Node Size by Betweenness"
+)
+
+# Explanation of Centrality Indicators
+# - Degree: The number of direct connections a node has. High-degree nodes are well-connected and often influential.
+# - Strength: The sum of edge weights connected to a node. In this case, as edges are unweighted, it corresponds to degree.
+# - Betweenness: Measures the extent to which a node lies on the shortest paths between other nodes. High betweenness indicates a node's importance in connecting different parts of the graph.
+```
+```{r}
+# Load necessary packages
+required_packages <- c("igraph", "magick")
+missing_packages <- setdiff(required_packages, installed.packages()[, "Package"])
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+lapply(required_packages, library, character.only = TRUE)
+
+# Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Filter for external members
+external_df <- subset(df, status == "externe")
+
+# Classify 'Level' into three categories
+classify_level <- function(level) {
+  if (!is.na(level)) {
+    if (startsWith(level, "M")) {
+      return("MCF")
+    } else if (startsWith(level, "P")) {
+      return("PU")
+    }
+  }
+  return("Autre")
+}
+external_df$Level_Category <- sapply(external_df$Level, classify_level)
+
+# Define the years to analyze
+years <- c(2017, 2018, 2019, 2020)
+
+# Define colors for categories
+category_colors <- c("MCF" = "blue", "PU" = "red", "Autre" = "green")
+
+# Function to create edges
+create_edges <- function(data) {
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  do.call(rbind, Filter(Negate(is.null), edge_list))
+}
+
+# Initialize image capture for GIF
+frames <- image_graph(width = 600, height = 600, res = 96)
+
+# Generate graphs for each year
+for (year in years) {
+  year_df <- subset(external_df, year == year)
+  edges <- create_edges(year_df)
+  
+  if (is.null(edges) || nrow(edges) == 0) {
+    print(paste("No edges for year", year))
+    next
+  }
+  
+  # Create graph
+  g <- graph_from_edgelist(edges, directed = FALSE)
+  
+  # Assign colors to vertices based on Level_Category
+  vertex_colors <- sapply(V(g)$name, function(node) {
+    level <- external_df$Level_Category[external_df$Name == node]
+    if (length(level) > 0) {
+      category_colors[level[1]]
+    } else {
+      "gray"
+    }
+  })
+  
+  # Plot the graph
+  plot(
+    g,
+    vertex.color = vertex_colors,
+    vertex.label = NA,
+    vertex.size = 5,
+    edge.color = "gray",
+    main = paste("External Members -", year)
+  )
+}
+dev.off()
+
+# Combine frames into a GIF
+animation <- image_animate(frames, fps = 1)
+image_write(animation, "external_members_animation.gif")
+
+```
+```{r}
+
+# Load necessary libraries
+library(igraph)
+library(dplyr)
+
+# Step 1: Load the dataset
+file_path <-  "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Filter the data for external members between 2017-2020
+external_df <- df %>%
+  filter(status == "externe" & year >= 2017 & year <= 2020)
+
+# Step 3: Categorize names
+# Classify 'Level' into three categories
+classify_name <- function(name) {
+  if (!is.na(name)) {
+    if (startsWith(level, "M")) {
+      return("MCF")
+    } else if (startsWith(level, "P")) {
+      return("PU")
+    }
+  }
+  return("Autre")
+}
+external_df$Category <- sapply(external_df$Name, categorize_name)
+
+# Step 4: Create edges grouped by institutions
+create_edges <- function(data) {
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  edge_list <- do.call(rbind, edge_list)  # Combine all edges
+  return(as.data.frame(edge_list))
+}
+edges <- create_edges(external_df)
+
+# Step 5: Build the graph
+g <- graph_from_data_frame(d = edges, directed = FALSE)
+
+# Add node categories as attributes
+V(g)$category <- external_df$Category[match(V(g)$name, external_df$Name)]
+
+# Step 6: Define color mapping
+color_map <- c("MCF" = "blue", "PU" = "green", "autre" = "red")
+node_colors <- color_map[V(g)$category]
+
+# Step 7: Plot the graph without node labels
+plot(
+  g,
+  vertex.color = node_colors,
+  vertex.size = 5,  # Adjust size as needed
+  vertex.label = NA,  # Remove node labels
+  edge.color = "gray",
+  main = "Graph of External Members (2017-2020) Categorized by Name"
+)
+```
+
+```{r}
+# Load necessary libraries
+required_packages <- c("igraph", "dplyr", "ggplot2")
+missing_packages <- setdiff(required_packages, installed.packages()[, "Package"])
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+lapply(required_packages, library, character.only = TRUE)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Filter the data for external members
+external_df <- df %>% filter(status == "externe")
+
+# Step 3: Preprocess names and categorize them
+categorize_level <- function(level) {
+  # Check if level is missing or invalid
+  if (is.na(level) || trimws(level) == "") {
+    return("autre")
+  }
+
+  # Convert to uppercase and trim spaces for consistency
+  level <- toupper(trimws(level))
+
+  # Categorize based on the first letter of the level
+  if (startsWith(level, "M")) {
+    return("MCF")
+  } else if (startsWith(level, "P")) {
+    return("PU")
+  } else {
+    return("autre")
+  }
+}
+
+# Apply categorization
+external_df$Category <- sapply(external_df$Level, categorize_level)
+
+# Step 4: Check distribution
+category_counts <- table(external_df$Category)
+category_percentages <- prop.table(category_counts) * 100
+
+cat("Category Counts:\n")
+print(category_counts)
+cat("\nCategory Percentages:\n")
+print(category_percentages)
+
+# Step 5: Create edges
+create_edges <- function(data) {
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+  return(edge_list)
+}
+edges <- create_edges(external_df)
+
+# Step 6: Build the graph
+g <- graph_from_edgelist(edges, directed = FALSE)
+
+# Add node categories as attributes
+V(g)$category <- external_df$Category[match(V(g)$name, external_df$Name)]
+
+# Step 7: Calculate centrality indicators
+degree_vals <- degree(g)
+betweenness_vals <- betweenness(g)
+strength_vals <- strength(g)
+
+# Step 8: Define color mapping and node sizes
+color_map <- c("MCF" = "blue", "PU" = "green", "autre" = "red")
+node_colors <- color_map[V(g)$category]
+node_sizes_degree <- degree_vals / max(degree_vals) * 10
+node_sizes_betweenness <- betweenness_vals / max(betweenness_vals) * 10
+node_sizes_strength <- strength_vals / max(strength_vals) * 10
+
+# Step 9: Plot the graph
+# Plot for Degree
+plot(
+  g,
+  vertex.color = node_colors,
+  vertex.size = node_sizes_degree,
+  vertex.label = NA,
+  edge.color = "gray",
+  main = "Graph with Node Size by Degree"
+)
+
+# Plot for Strength
+plot(
+  g,
+  vertex.color = node_colors,
+  vertex.size = node_sizes_strength,
+  vertex.label = NA,
+  edge.color = "gray",
+  main = "Graph with Node Size by Strength"
+)
+
+# Plot for Betweenness
+plot(
+  g,
+  vertex.color = node_colors,
+  vertex.size = node_sizes_betweenness,
+  vertex.label = NA,
+  edge.color = "gray",
+  main = "Graph with Node Size by Betweenness"
+)
+
+
+```
+
+```{r}
+# Load necessary libraries
+required_packages <- c("igraph", "dplyr", "ggplot2")
+missing_packages <- setdiff(required_packages, installed.packages()[, "Package"])
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+lapply(required_packages, library, character.only = TRUE)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Filter the data for external members
+external_df <- df %>% filter(status == "externe")
+
+# Step 3: Preprocess names and categorize them
+categorize_level <- function(level) {
+  # Check if level is missing or invalid
+  if (is.na(level) || trimws(level) == "") {
+    return("autre")
+  }
+
+  # Convert to uppercase and trim spaces for consistency
+  level <- toupper(trimws(level))
+
+  # Categorize based on the first letter of the level
+  if (startsWith(level, "M")) {
+    return("MCF")
+  } else if (startsWith(level, "P")) {
+    return("PU")
+  } else {
+    return("autre")
+  }
+}
+
+# Apply categorization
+external_df$Category <- sapply(external_df$Level, categorize_level)
+
+# Step 4: Check distribution
+category_counts <- table(external_df$Category)
+category_percentages <- prop.table(category_counts) * 100
+
+cat("Category Counts:\n")
+print(category_counts)
+cat("\nCategory Percentages:\n")
+print(category_percentages)
+
+# Step 5: Create edges
+create_edges <- function(data) {
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+  return(edge_list)
+}
+edges <- create_edges(external_df)
+
+# Step 6: Build the graph
+g <- graph_from_edgelist(edges, directed = FALSE)
+
+# Add node categories as attributes
+V(g)$category <- external_df$Category[match(V(g)$name, external_df$Name)]
+
+# Step 7: Calculate degree centrality based on categories
+degree_centrality <- degree(g, mode = "all")
+degree_df <- data.frame(
+  Name = names(degree_centrality),
+  Degree = degree_centrality,
+  Category = V(g)$category[match(names(degree_centrality), V(g)$name)]
+)
+
+# Summarize degree centrality by category
+degree_summary <- degree_df %>% 
+  group_by(Category) %>% 
+  summarise(
+    Average_Degree = mean(Degree, na.rm = TRUE),
+    Total_Degree = sum(Degree, na.rm = TRUE),
+    Count = n()
+  )
+
+cat("Degree Centrality Summary by Category:\n")
+print(degree_summary)
+
+# Step 8: Define color mapping and node sizes
+color_map <- c("MCF" = "blue", "PU" = "green", "autre" = "red")
+node_colors <- color_map[V(g)$category]
+node_sizes_degree <- degree_centrality / max(degree_centrality) * 10
+
+# Step 9: Plot the graph
+plot(
+  g,
+  vertex.color = node_colors,
+  vertex.size = node_sizes_degree,
+  vertex.label = NA,
+  edge.color = "gray",
+  main = "Graph with Node Size by Degree Centrality"
+)
+
+
+```
+```{r}
+# Load necessary libraries
+required_packages <- c("igraph", "dplyr", "ggplot2")
+missing_packages <- setdiff(required_packages, installed.packages()[, "Package"])
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+lapply(required_packages, library, character.only = TRUE)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Filter the data for external members
+external_df <- df %>% filter(status == "externe")
+
+# Step 3: Preprocess names and categorize them
+categorize_level <- function(level) {
+  # Check if level is missing or invalid
+  if (is.na(level) || trimws(level) == "") {
+    return("autre")
+  }
+
+  # Convert to uppercase and trim spaces for consistency
+  level <- toupper(trimws(level))
+
+  # Categorize based on the first letter of the level
+  if (startsWith(level, "M")) {
+    return("MCF")
+  } else if (startsWith(level, "P")) {
+    return("PU")
+  } else {
+    return("autre")
+  }
+}
+
+# Apply categorization
+external_df$Category <- sapply(external_df$Level, categorize_level)
+
+# Step 4: Check distribution
+category_counts <- table(external_df$Category)
+category_percentages <- prop.table(category_counts) * 100
+
+cat("Category Counts:\n")
+print(category_counts)
+cat("\nCategory Percentages:\n")
+print(category_percentages)
+
+# Step 5: Create edges
+create_edges <- function(data) {
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))  # Return as a matrix with 2 columns
+    } else {
+      NULL  # Return NULL for groups with fewer than 2 members
+    }
+  })
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+  return(edge_list)
+}
+edges <- create_edges(external_df)
+
+# Step 6: Build the graph
+g <- graph_from_edgelist(edges, directed = FALSE)
+
+# Add node categories as attributes
+V(g)$category <- external_df$Category[match(V(g)$name, external_df$Name)]
+
+# Step 7: Calculate degree centrality based on categories
+degree_centrality <- degree(g, mode = "all")
+degree_df <- data.frame(
+  Name = names(degree_centrality),
+  Degree = degree_centrality,
+  Category = V(g)$category[match(names(degree_centrality), V(g)$name)]
+)
+
+# Summarize degree centrality by category
+degree_summary <- degree_df %>% 
+  group_by(Category) %>% 
+  summarise(
+    Average_Degree = mean(Degree, na.rm = TRUE),
+    Total_Degree = sum(Degree, na.rm = TRUE),
+    Count = n()
+  )
+
+cat("Degree Centrality Summary by Category:\n")
+print(degree_summary)
+
+# Step 8: Perform community detection using the Louvain method
+communities <- cluster_louvain(g)
+V(g)$community <- membership(communities)
+
+# Summarize community detection results
+community_summary <- data.frame(
+  Community = as.factor(V(g)$community),
+  Category = V(g)$category
+) %>% 
+  group_by(Community, Category) %>% 
+  summarise(Count = n())
+
+cat("Community Detection Summary:\n")
+print(community_summary)
+
+# Step 9: Define color mapping and node sizes
+color_map <- c("MCF" = "blue", "PU" = "green", "autre" = "red")
+node_colors <- color_map[V(g)$category]
+node_sizes_degree <- degree_centrality / max(degree_centrality) * 10
+community_colors <- rainbow(max(V(g)$community))[V(g)$community]
+
+# Step 10: Plot the graph with communities
+plot(
+  g,
+  vertex.color = community_colors,
+  vertex.size = node_sizes_degree,
+  vertex.label = NA,
+  edge.color = "gray",
+  main = "Graph with Community Detection (Louvain)"
+)
+
+
+```
+```{r}
+# Load necessary libraries
+library(igraph)
+
+# Step 1: Load the dataset
+file_path <- "H:/Downloads/Auditions.db.comp.csv"
+df <- read.csv(file_path, fileEncoding = "latin1")
+
+# Step 2: Filter the data for external members
+external_df <- subset(df, status == "externe")
+
+# Step 3: Create edges
+create_edges <- function(data) {
+  edge_list <- lapply(split(data$Name, data$institutions), function(group) {
+    if (length(group) > 1) {
+      t(combn(group, 2, simplify = TRUE))
+    } else {
+      NULL
+    }
+  })
+  edge_list <- do.call(rbind, Filter(Negate(is.null), edge_list))
+  return(as.data.frame(edge_list))
+}
+
+edges <- create_edges(external_df)
+colnames(edges) <- c("Source", "Target")
+
+# Step 4: Build the graph
+g <- graph_from_data_frame(edges, directed = FALSE)
+
+# Step 5: Calculate edge betweenness
+edge_betweenness <- edge_betweenness(g)
+
+# Step 6: Identify the top 3 edges by betweenness
+top_3_edges_indices <- order(edge_betweenness, decreasing = TRUE)[1:3]
+top_3_edges <- get.data.frame(g, what = "edges")[top_3_edges_indices, ]
+
+# Print the names of the top 3 edges
+cat("Top 3 Edges with Highest Betweenness:\n")
+print(top_3_edges)
+
+```
+```{r}
+
+# Load packages
+library(circlize)
+library(ggalluvial)
+library(ggplot2)
+library(dplyr)
+
+# 1. Chord Diagram Data
+chord_data <- data.frame(
+  from = c("Indonesia", "Vietnam", "India", "Panama", "North America", "Netherland", "France"),
+  to = c("France", "France", "France", "France", "France", "France", "France"),
+  value = c(1, 1, 1, 1, 1, 1, 1) # Example numbers; adjust as needed
+)
+
+# Plot Chord Diagram
+circlize::chordDiagram(
+  chord_data,
+  transparency = 0.5,
+  directional = TRUE,
+  annotationTrack = "grid",
+  preAllocateTracks = list(track.height = 0.1)
+)
+
+title("Student Trajectory Across Continents")
+
+# 2. Sankey Plot Data
+
+# Prepare the data for the Sankey Plot
+sankey_data <- data.frame(
+  year = c(
+    "2021", "2021", "2021", "2021", "2021", "2021", "2021", "2021", "2021", "2021", "2021", # 2021 students
+    "2022", "2022", "2022", "2022", "2022", "2022", "2022", "2022", "2022", # 2022 students
+    "2023", "2023", "2023", "2023", "2023", "2023", "2023" # 2023 students
+  ),
+  student = c(
+    # 2021
+    "Sean", "Nhi", "Manal", "Piere", "Kiki", "Alex", "Ethan", "Daniel", "Jana", "Michelle", "Yudita",
+    # 2022
+    "Sean", "Nhi", "Kiki", "Alex", "Ethan", "Daniel", "Yudita", "Krazmira", "Ejam",
+    # 2023
+    "Sean", "Nhi", "Kiki", "Alex", "Ethan", "Daniel", "Yudita"
+  ),
+  status = c(
+    # 2021
+    "Active", "Active", "Left", "Left", "Active", "Active", "Active", "Active", "Left", "Left", "Active",
+    # 2022
+    "Active", "Active", "Active", "Active", "Active", "Active", "Active", "Temporary", "Temporary",
+    # 2023
+    "Active", "Active", "Active", "Active", "Active", "Active", "Active"
+  )
+)
+
+# Create Sankey Plot
+ggplot(sankey_data, aes(x = year, stratum = status, alluvium = student, y = ..count.., fill = status)) +
+  geom_flow(stat = "alluvium", lode.guidance = "rightleft", color = "darkgray") +
+  geom_stratum(alpha = 0.8) +
+  theme_minimal() +
+  labs(title = "Student Progression Through the Bachelor Program",
+       x = "Year",
+       y = "Number of Students") +
+  scale_fill_brewer(palette = "Set3")
+
+```
+```{r}
+library(networkD3)
+
+# Create the nodes for the Sankey diagram
+nodes <- data.frame(name = c(
+  "2021", "2022", "2023", 
+  "Sean", "Nhi", "Manal", "Piere", "Kiki", "Alex", "Ethan", "Daniel", "Jana", "Michelle", "Yudita", "Krazmira", "Ejam"
+))
+
+# Create the links for the Sankey diagram
+links <- data.frame(
+  source = c(
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # From 2021 to students
+    4, 5, 6, 7, 8, 9, 10, 11, 12, 13,  # Students leaving from 2021
+    1, 1, 1, 1, 1, 1, 1,  # From 2022 to students
+    14, 15,  # Temporary students in 2022
+    2, 2, 2, 2, 2, 2, 2   # From 2023 to students
+  ),
+  target = c(
+    3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,  # From 2021 to students
+    6, 11, 12, 10, 13, 5, 4, 7, 8, 9,  # Students leaving from 2021
+    3, 4, 7, 8, 9, 10, 13,  # From 2022 to students
+    3, 3,  # Temporary students in 2022
+    3, 4, 7, 8, 9, 10, 13   # From 2023 to students
+  ),
+  value = c(
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  # Links from 2021
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  # Leaving from 2021
+    1, 1, 1, 1, 1, 1, 1,  # Links from 2022
+    1, 1,  # Temporary students
+    1, 1, 1, 1, 1, 1, 1   # Links from 2023
+  )
+)
+
+# Add unique colors for each name
+color_scale <- 'd3.scaleOrdinal() 
+  .domain(["Sean", "Nhi", "Manal", "Piere", "Kiki", "Alex", "Ethan", "Daniel", "Jana", "Michelle", "Yudita", "Krazmira", "Ejam"])
+  .range(["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf", "#aec7e8", "#ffbb78", "#98df8a"]);'
+
+# Create the Sankey diagram
+sankey <- sankeyNetwork(
+  Links = links, 
+  Nodes = nodes, 
+  Source = "source", 
+  Target = "target", 
+  Value = "value", 
+  NodeID = "name", 
+  colourScale = color_scale,
+  fontSize = 12, 
+  nodeWidth = 30
+)
+
+# Render the diagram
+sankey
+
+```
+```{r}
+# Load the necessary library
+library(networkD3)
+
+# Load the CSV file (change the path if needed)
+data <- read.csv("H:/Downloads/Sankey_Flourish_Data.csv")
+
+# View the first few rows to check the data
+head(data)
+
+```
+```{r}
+# Create a list of unique nodes (students and stages)
+nodes <- unique(c(as.character(data$Source), as.character(data$Target)))
+
+# Map the names to node indices
+data$SourceID <- match(data$Source, nodes) - 1
+data$TargetID <- match(data$Target, nodes) - 1
+
+# Prepare the data for Sankey diagram
+links <- data.frame(
+  source = data$SourceID,
+  target = data$TargetID,
+  value = data$Value
+)
+
+# Create the Sankey diagram using networkD3
+sankey <- sankeyNetwork(
+  Links = links, 
+  Nodes = data.frame(name = nodes),
+  Source = "source", 
+  Target = "target", 
+  Value = "value", 
+  NodeID = "name",
+  units = "Students"
+)
+
+# Plot the Sankey diagram
+print(sankey)
+
+```
+```{r}
+# Load the necessary library
+library(networkD3)
+
+# Manually define the nodes and transitions
+nodes <- c("2021", "2022", "2023", "Dropout (S1)", "Dropout (S2)", "Erasmus")
+
+# Define the transitions between years and dropouts
+links <- data.frame(
+  source = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5),
+  target = c(1, 1, 3, 4, 5, 1, 2, 3, 4, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 6),
+  value = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2),
+  student = c("Sean", "Nhi", "Manal", "Piere", "Kiki", "Alex", "Ethan", "Daniel", "Jana", "Michelle",
+              "Sean", "Nhi", "Kiki", "Alex", "Ethan", "Daniel", "Yudita", "Erasmus", "Erasmus", "Erasmus", "Erasmus")
+)
+
+# Map student names to colors (ensure each student has a unique color)
+student_colors <- setNames(c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", 
+                             "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+                             "#1a55FF", "#636EFA"),
+                           c("Sean", "Nhi", "Manal", "Piere", "Kiki", "Alex", "Ethan", 
+                             "Daniel", "Jana", "Michelle", "Yudita", "Erasmus"))
+
+# Assign colors to the links based on the student names
+links$color <- student_colors[links$student]
+
+# Create the Sankey diagram
+sankey <- sankeyNetwork(
+  Links = links,
+  Nodes = data.frame(name = nodes),
+  Source = "source", 
+  Target = "target", 
+  Value = "value", 
+  NodeID = "name",
+  units = "Students",
+  colourScale = "category20",
+  LinkGroup = "color"
+)
+
+# Plot the Sankey diagram
+print(sankey)
+
+```
+

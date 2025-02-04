@@ -1,0 +1,72 @@
+Certainly! Below is an R Markdown (Rmd) file that performs linear regression manually and calculates the equation for the line of best fit. You can copy this content into an R Markdown file and run it to see the results.
+
+```markdown
+---
+title: "Linear Regression: Line of Best Fit"
+author: "Your Name"
+date: "Today's Date"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Linear Regression: Finding the Line of Best Fit Manually
+
+Given data:
+- \(X\) values: \(0, 3, 2, 1, 5, 4, 3, 0, 4, 5\)
+- \(Y\) values: \(2, 8, 7, 3, 12, 10, 9, 3, 9, 13\)
+
+### Step-by-Step Calculation
+
+```{r}
+# Data
+X <- c(0, 3, 2, 1, 5, 4, 3, 0, 4, 5)
+Y <- c(2, 8, 7, 3, 12, 10, 9, 3, 9, 13)
+
+# Number of data points
+n <- length(X)
+
+# Calculate means
+X_bar <- mean(X)
+Y_bar <- mean(Y)
+
+# Calculate the components for the slope (m)
+numerator <- sum((X - X_bar) * (Y - Y_bar))
+denominator <- sum((X - X_bar)^2)
+
+# Calculate the slope (m) and intercept (b)
+m <- numerator / denominator
+b <- Y_bar - m * X_bar
+
+# Display the results
+m
+b
+```
+
+The slope (\(m\)) of the line of best fit is `r round(m, 2)`, and the intercept (\(b\)) is `r round(b, 3)`.
+
+### Equation of the Line of Best Fit
+
+The equation of the line of best fit is:
+
+\[ y = `r round(m, 2)`x + `r round(b, 3)` \]
+
+### Plotting the Data and the Line of Best Fit
+
+```{r}
+# Plot the data points
+plot(X, Y, main = "Scatter Plot with Line of Best Fit", xlab = "X", ylab = "Y", pch = 19, col = "blue")
+
+# Add the line of best fit
+abline(a = b, b = m, col = "red", lwd = 2)
+
+# Add legend
+legend("topleft", legend = c("Data points", "Line of Best Fit"), col = c("blue", "red"), pch = c(19, NA), lty = c(NA, 1), lwd = c(NA, 2))
+```
+
+In this plot, the blue points represent the original data, and the red line represents the line of best fit calculated manually.
+```
+
+This R Markdown file includes the data, the manual calculation of the slope and intercept, and a plot showing the data points and the line of best fit. After copying this into an `.Rmd` file, you can knit the document to see the results.

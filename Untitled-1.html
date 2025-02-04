@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Second Page</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="video-container">
+        <video autoplay loop muted>
+            <source src="crusades.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <section>
+        <h2 style="color: white; font-family: 'Roman SD', sans-serif;">Choose your character</h2>
+    
+        <div class="character-selection">
+            <label for="male1">
+                <input type="checkbox" id="male1" name="character" value="male">
+                <img src="male_character_image_1.jpg" alt="Male Character 1">
+            </label>
+            <label for="female1">
+                <input type="checkbox" id="female1" name="character" value="female">
+                <img src="female_character_image_1.jpg" alt="Female Character 1">
+            </label>
+            <label for="male2">
+                <input type="checkbox" id="male2" name="character" value="male">
+                <img src="male_character_image_2.jpg" alt="Male Character 2">
+            </label>
+            <label for="female2">
+                <input type="checkbox" id="female2" name="character" value="female">
+                <img src="female_character_image_2.jpg" alt="Female Character 2">
+            </label>
+        </div>
+    </section>
+    
+    <script>
+        document.querySelectorAll('.character-selection input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // Limit selection to two characters
+                var selectedCount = document.querySelectorAll('.character-selection input[type="checkbox"]:checked').length;
+                if (selectedCount > 1) {
+                    this.checked = false;
+                } else if (selectedCount === 1) {
+                    // Show confirmation dialog
+                    var confirmation = confirm("Are you sure with your choice?");
+                    if (confirmation) {
+                        // Redirect to the third page
+                        window.location.href = "pagee.html";
+                    } else {
+                        // Uncheck the checkboxes if the user cancels
+                        document.querySelectorAll('.character-selection input[type="checkbox"]').forEach(otherCheckbox => {
+                            otherCheckbox.checked = false;
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

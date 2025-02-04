@@ -1,0 +1,77 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+library(cluster)
+library(TraMineR)
+```
+
+```{r}
+tinderMessagesDf <- read.csv("H:/Downloads/messages.db.csv")
+```
+
+```{r}
+tinderMessagesSeq <- tinderMessagesDf %>%
+group_by(conversationid) %>%
+summarise(seq = paste(tail(message.type, 6), collapse = ","))
+traminerSeq <- seqdef(tinderMessagesSeq$seq, stsep = ",")
+
+```
+```{r}
+par(mfrow = c(2, 3))
+seqplot(traminerSeq, type = "i", with.legend = FALSE)
+seqplot(traminerSeq, type = "d", with.legend = FALSE)
+seqplot(traminerSeq, type = "ms", with.legend = FALSE)
+seqplot(traminerSeq, type = "mt", with.legend = FALSE)
+seqplot(traminerSeq, type = "pc", with.legend = FALSE)
+seqlegend(traminerSeq)
+
+```
+
+```{r}
+seqIplot(traminerSeq, sortv = "from.start")
+```
+
+```{r}
+seqplot(traminerSeq, type = "f")
+```
+
+```{r}
+heatmap(seqtrate(traminerSeq), )
+
+```
+```{r}
+submat <- seqsubm(traminerSeq, method = "TRATE")
+```
+```{r}
+heatmap(submat, Rowv = NA, Colv = NA, )
+
+```
+```{r}
+sampleSeq <- seqdef(sample(tinderMessagesSeq$seq, size = 2500), stsep = ",")
+
+```
+```{r}
+library(cluster)
+dist.om1 <- seqdist(sampleSeq, method = "OM", indel = 1, sm = "TRATE")
+```
+```{r}
+clusterward1 <- agnes(dist.om1, diss = TRUE, method = "ward")
+# plot(clusterward1, which.plot = 2)
+cl1.4 <- cutree(clusterward1, k = 4)
+cl1.4fac <- factor(cl1.4, labels = c("Affectionate Starts", "Chunky Exchanges", "Inquisitive Conversations", "Abrupt Ends"))
+```
+
+```{r}
+seqIplot(sampleSeq, group = cl1.4fac, sortv = "from.start")
+
+```
+
+

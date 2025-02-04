@@ -1,0 +1,319 @@
+---
+title: "Coffee Analysis"
+author: "Sean,Ethan,Daniel,Nhi"
+date: "2024-05-31"
+output: pdf_document
+---
+
+
+#Introduction
+
+The Coffee Quality Data (CQI May-2023) dataset, maintained by the Coffee Quality Institute (CQI), offers a comprehensive resource for understanding and analyzing various aspects of coffee production and quality. Founded in 1996, CQI is a non-profit organization headquartered in California, USA, dedicated to improving the quality and value of coffee worldwide. Through research, training, and certification programs, CQI collaborates with coffee growers, processors, roasters, and other stakeholders to enhance coffee quality standards, promote sustainability, and support the development of the specialty coffee industry.
+
+This dataset includes 41 columns and 162 entries, with detailed information about the origin, processing, and sensory evaluation of coffee. Key variables include Country of Origin, Region, Farm Name, Altitude, Variety, and various coffee quality scores such as Flavor, Aroma, Sweetness, and Overall Score. This rich dataset provides an excellent opportunity for conducting a thorough data analysis to uncover insights into the factors that influence coffee quality.
+
+As a group of students embarking on a data analysis project, this dataset presents an ideal opportunity to apply and develop various analytical skills. The analysis will involve working with data to create visualizations, perform statistical tests such as Z tests, T tests, and Chi-square tests, and apply linear regression and Principal Component Analysis (PCA). These techniques will help explore relationships between different variables, identify patterns, and draw meaningful conclusions about the factors affecting coffee quality.
+
+The aim of this report is to provide a detailed exploration of the Coffee Quality Data (CQI May-2023) dataset, utilizing various data analysis techniques to gain insights into coffee quality and production practices. By doing so, this report will contribute to a deeper understanding of the coffee industry and support efforts to improve coffee quality and sustainability.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(broom)
+```
+
+To input the data
+
+```{r data}
+df<- read.csv(file = "H:/Downloads/coffee_quality.csv",
+                      stringsAsFactors = FALSE)
+
+```
+
+#General Analysis
+
+Since there are many Sensory Score, it would be interesting to see their distribution so that we can find the correct testing method for later analysis:
+
+```{r echo=T, eval=T}
+# List of columns to plot
+quality_columns <- c("Aroma", "Flavor", "Aftertaste", "Acidity", "Body", "Balance", 
+                     "Uniformity", "Clean.Cup", "Sweetness", "Overall")
+
+# Reshape the df to long format for easy plotting
+library(tidyr)
+coffee_long <- df %>%
+  select(all_of(quality_columns)) %>%
+  pivot_longer(cols = everything(), names_to = "Quality_Attribute", values_to = "Score")
+
+ggplot(coffee_long, aes(x = Score, fill = Quality_Attribute)) +
+  geom_density(alpha = 0.6, color = NA) +
+  facet_wrap(~ Quality_Attribute, scales = "free", ncol = 2) +
+  labs(title = "Distribution of Coffee Quality Attributes",
+       x = "Score",
+       y = "Density") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 12))
+
+````
+
+We can see that here, for almost all the Sensory Score, they have the shape of normal distribution.
+
+
+First I wanted to see if there is a relationship between Altitude and Aroma
+```{r echo=T, eval=T}
+
+ggplot(df, aes(y = Altitude)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue") +
+  labs(title = "Box Plot of Altitude",
+       y = "Altitude (meters)") +
+  theme_minimal()
+```
+Here since there are 3 outliers that are much larger than the rest, I removed the 3 outliers to get better estimation on the relationship between the two variables.
+
+```{r echo=T, eval=T}
+df$Altitude <- as.numeric(df$Altitude)
+df$Aroma <- as.numeric(df$Aroma)
+
+
+correlation <- cor(df$Altitude, df$Aroma, method = "pearson", use = "complete.obs")
+correlation
+unique(df$Altitude)
+
+df_filter <- subset(df, df$Altitude <2000)
+
+library("ggpubr")
+ggscatter(df_filter, x = "Aroma", y = "Altitude", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Aroma", ylab = "Altitude") +
+      ggtitle("Scatter Plot of Aroma vs. Altitude")
+
+```
+
+Since the correlation coefficient is 0.27, it indicates a weak positive relationship between altitude and aroma. This suggests that higher altitudes are associated with slightly higher aroma scores, but the relationship is not strong.
+
+Moving on, now take a look on processing method:
+```{r echo=T, eval=T}
+unique(df$Processing.Method)
+library(dplyr)
+
+
+processing_method_counts <- table(df$Processing.Method)
+print(processing_method_counts)
+
+# Convert value counts to a df frame
+processing_method_counts_df <- as.data.frame(processing_method_counts)
+names(processing_method_counts_df) <- c("Processing.Method", "Count")
+
+
+# Create a bar plot
+ggplot(processing_method_counts_df, aes(x = Processing.Method, y = Count)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  labs(title = "Value Counts of Processing Methods",
+       x = "Processing Method",
+       y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) 
+
+
+```
+Here we can see the trend of Washed/Wet processing method among all of the processes.
+
+Take the average of all Scores, grouped by Processing Method:
+```{r echo=T, eval=T}
+
+average_by_processing_method <- df %>%
+  group_by(Processing.Method) %>%
+  summarize(
+    Avg_Aroma = mean(Aroma, na.rm = TRUE),
+    Avg_Flavor = mean(Flavor, na.rm = TRUE),
+    Avg_Aftertaste = mean(Aftertaste, na.rm = TRUE),
+    Avg_Acidity = mean(Acidity, na.rm = TRUE),
+    Avg_Body = mean(Body, na.rm = TRUE),
+    Avg_Balance = mean(Balance, na.rm = TRUE),
+    Avg_Uniformity = mean(Uniformity, na.rm = TRUE),
+    Avg_Clean_Cup = mean(Clean.Cup, na.rm = TRUE),
+    Avg_Sweetness = mean(Sweetness, na.rm = TRUE),
+    Avg_Overall = mean(Overall, na.rm = TRUE)
+  )
+
+# Print the result
+average_by_processing_method
+
+```
+Here we just want to see the mean of each Sensory Score based on Processing Methods.
+
+Count of Country of Origin and make a graph on it:
+```{r echo=T, eval=T}
+country_counts <- df %>%
+  count(Country.of.Origin, sort = TRUE)
+
+# Print the result
+print(country_counts)
+
+# Bar plot of Country of Origin counts
+ggplot(country_counts, aes(x = reorder(Country.of.Origin, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Coffee Origins",
+       x = "Country of Origin",
+       y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+We can see Taiwan took the majority of data in this dataset.
+
+Count of occurrences of each processing method for each country of origin:
+```{r echo=T, eval=T}
+
+count_by_country_method <- df %>%
+  group_by(Country.of.Origin, Processing.Method) %>%
+  count()
+
+# Print the result
+print(count_by_country_method)
+```
+Stacked bar charts where each bar represents the count of processing methods for each country of origin
+```{r echo=T, eval=T}
+library(ggplot2)
+
+ggplot(count_by_country_method, aes(x = Country.of.Origin, y = n, fill = Processing.Method)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Count of Processing Methods by Country of Origin",
+       x = "Country of Origin",
+       y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  
+  scale_fill_brewer(palette = "Set3") 
+```
+
+As you can see on the plot, for most of the bars, the grey color which stands for Washed / Wet dominates the most which means for almost all the countries, they prefer this processing method.
+
+
+#Moisture Analysis
+
+#Linear Regression of Overall and Moisture 
+
+I use Linear Regression to see if Moisture Percentage can predict the Overall Score of the coffee. I saw a anomaly in the data because its imposible to make a coffee with 0 moisture so i remove that outlier.
+
+```{r Linear Regression MP}
+
+#To remove the outlier
+df <- subset(df, df$Moisture.Percentage >2 )
+
+# Visualize with Scatter plot
+plot(df$Moisture.Percentage, df$Overall, main = "Linear Regression For Overall Score Based on Moisture Percentage",
+     xlab = "Moisture Percentage", ylab = "Overall Score of the coffee",
+     pch = 19, col = "blue")
+
+# Linear regression using Linear Model 'lm'
+model <- lm(Overall ~ Moisture.Percentage, data = df)
+
+# Plotting the line of best fit
+abline(model, col = "red", lwd = 2)
+```
+
+Based on the result we conclude that Moisture does affect the Overall score of coffee, Eventhough the Relationship is weak. 
+
+
+#Chi Square for Which country influence moisture level in the coffee
+
+The reason why i use Chi Square is to see if there is a relation between Moisture Level and Country
+```{r Ki Square}
+
+# Im Creating Moisture_Level variable so when the Moisture Percentage is higher than the Mean of MP it renamed by High and if its lower it became low
+df <- df %>%
+  mutate(Moisture_Level = ifelse(Moisture.Percentage < mean(Moisture.Percentage, na.rm = TRUE), "Low", "High"))
+
+# I remove rows with missing values in 'Country of Origin' or 'Moisture_Level'
+cleaned_data <- df %>%
+  filter(!is.na(`Country.of.Origin`) & !is.na(Moisture_Level))
+
+# I remove the row which have missing value in it to ensure data lengths are consistent 
+cleaned_data <- cleaned_data %>%
+  drop_na(`Country.of.Origin`, Moisture_Level)
+
+# Create a contingency table
+contingency_table <- table(cleaned_data$`Country.of.Origin`, cleaned_data$Moisture_Level)
+contingency_table
+
+# Perform Chi-square test
+chi_square_test <- chisq.test(contingency_table)
+chi_square_test
+
+# Chi-square test results
+chi_square_test$statistic
+chi_square_test$p.value
+chi_square_test$expected
+
+# To Visualize the relation between Country of Origin and the Moisture Level
+ggplot(cleaned_data, aes(x = `Country.of.Origin`, fill = Moisture_Level)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Country affect moisture level?",
+       x = "Country of Origin",
+       y = "Number of entry",
+       fill = "Moisture_Level") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+
+```
+
+Based on the Chi Square Test
+
+With a p-value of 4.692e-05, it is significantly smaller than the commonly chosen significance level of 0.05.
+
+Since the p-value is less than 0.05, we reject the null hypothesis. Therefore, we conclude that there is a significant association between Country of Origin and Moisture_Level. In other words, they are not independent.
+
+Based on this we can see that the country of origin does have an influence on the moisture level of the coffee samples in the dataset.
+
+
+#Chi Square for How method of coffee processing influence the Moisture Level of the coffee#
+
+The reason why i use Chi Square is to see if there is a relation between Moisture Level and Processing Method. I use the same method as CS of Country and Moisture
+
+```{r method}
+
+
+cleaned_dataa <- df %>%
+  filter(!is.na(`Processing.Method`) & !is.na(Moisture_Level))
+
+cleaned_data <- cleaned_data %>%
+  drop_na(`Processing.Method`, Moisture_Level)
+
+contingency_table <- table(cleaned_data$`Processing.Method`, cleaned_data$Moisture_Level)
+contingency_table
+
+chi_square_test <- chisq.test(contingency_table)
+chi_square_test
+
+chi_square_test$statistic
+chi_square_test$p.value
+chi_square_test$expected
+
+ggplot(cleaned_data, aes(x = `Processing.Method`, fill = Moisture_Level)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Processing method affect the moisture level?",
+       x = "Processing Method",
+       y = "Number of Entry",
+       fill = "Moisture_Level") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Based on the Chi Square Test
+
+With a p-value of 0.5402, it is greater than the commonly chosen significance level of 0.05.
+
+Since the p-value is greater than 0.05, we fail to reject the null hypothesis. Therefore, we conclude that there is not enough evidence to suggest a significant association between `Processing Method` and `Moisture Level`. In other words, they are considered independent.
+
+We can see that the processing method does not have a significant influence on the moisture level of the coffee samples in the dataset.
+
+#Conclusion 
+
+Moisture have a significant association between Country of Origin and Moisture Level, indicating that the country influences the moisture content of coffee samples. But there is no significant association between Processing Method and Moisture Level, suggesting that the method of processing does not influence the moisture content of coffee samples. We also can predict that Moisture Percentage does affect the Overall Score of coffee, but the relationship is weak.
+
+
+
+
+

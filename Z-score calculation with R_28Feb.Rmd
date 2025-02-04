@@ -1,0 +1,78 @@
+---
+title: 'Data Analysis: Z-score calculation with R'
+author: 'MANOS Thanos'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+  html_document: default
+  word_document: default
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(message=FALSE, echo = TRUE, tidy.opts=list(width.cutoff=60)) 
+```
+ 
+Standard score or z-score is a measure of standard deviations that how much below or above the element is located from the mean value. Z-scores are usually located around -3 to 3 sigma range (based on the variance of data, it might be different). Z-scores mean value is very close to 0, and both variance and standard deviation are equal to 1.
+
+Z-score can be calculated with the formula below:
+
+$$z=(x- \mu)/ \sigma $$ 
+
+where:
+
+   - $x$ - vector (elements of $x$ vector)
+   
+   - $μ$ - mean value of $x$ vector
+   
+   - $σ$ - standard deviation of $x$ vector
+
+The normal distribution curve can easily explain a z-score. Z-score values are located around the curve below. Zero is a mean center value. The highest and lowest values can be found in the right and left most parts of the curve.
+
+
+Let's generate some sample data and get its z-scores.
+
+```{r, echo=T, eval=T}
+set.seed(123)
+```
+
+```{r, echo=T, eval=T}
+x = sample(1:50, 100, replace=T)
+hist(x)
+```
+
+Getting z-scores with a formula.
+
+```{r, echo=T, eval=T}
+m = mean(x)
+s = sd(x)
+
+zs = (x - m)/s
+```
+
+```{r, echo=T, eval=T}
+summary(x)
+```
+
+```{r, echo=T, eval=T}
+summary(zs)
+```
+
+As summary shows, the x vector was centered into 0 mean value. In 'zs', the value of x vector's 1 is equal to -1.71, and 50 is equal to 1.84 sigma value.
+
+In R, we can use **scale()** command to get z-scores.
+
+```{r, echo=T, eval=T}
+scale(x)
+```
+
+We need the **first part** of a scale function result.
+
+```{r}
+sc_zs = scale(x)[,1]
+summary(sc_zs)
+```
+
+A summary shows that the result is the same as the one that was taken with a formula.
+
+The scale function is often used to clean up data to remove the mean value from the series data.

@@ -1,0 +1,104 @@
+---
+title: "Data Analysis – Test Evaluation 2 (Part 2)"
+author: 'Your name here: Paolo Sean'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+---
+
+## Instructions (read carefully): 
+
+### Use Rstudio and avoid repetitive and unnecessary "global" knitting while working your excercises. Prefer to "Run current chuck" to check and debug. Knit at the end of course to generate your PDF.
+
+### Please DO NOT mix the R markdown structure! Just give your answers in the chunks right below each question and provide brief text-answers when required. Do not delete anything.
+
+### Load your packages. In general you might need to install more during the exam (but most likely not on this occasion). All the relevant information will be given when necessary.
+
+***
+### **Make sure your PDF contains the OUTPUT !!!**
+***
+
+**Good luck!**
+
+
+### Exercise 6 **(10 points in total)**
+
+Use your **RND** value given in the first page of the test (Part 1) and mention it in the relevant chunk!
+
+The **AvsB.txt** data set contains information about the consumption of gallons per mile for light trucks produced in Country A (sample 1) and Country B (sample 2).
+
+**(1)** Load and read the data and give a simple summary statistics for each sample. No need to type by hand anything. Just make sure that your codes gives the relevant answer. **(1.5 points)**
+```{r echo=T, eval=T}
+AvsB <- read.table(file = "./AvsB.txt",
+                      stringsAsFactors = FALSE)
+
+head(AvsB)
+summary(AvsB)
+```
+
+**(2)** For the purposes of this particular study, the size of the samples is considered to be **small**. The 1st column refers to Country A and the 2nd to Country B. Create two variables for the two columns and name them **Ampg** and **Bmpg** respectively. **(1.5 points)**
+
+```{r echo=T, eval=T}
+# Ampg = ...
+# Bmpg = ...
+
+names(AvsB)<- c("Ampg","Bmpg")
+head(AvsB)
+```
+
+**(3)** For the Ampg (Country A) variable, replace the 1st line entry (initially 18) to $18+$**\textcolor{blue}{(RMD/10)}** (mind the $\pm$ signs) **using an R command (replace)** (look it up if necessary) and run a summary statistics for the updated variable Ampg (keep the same variable name). Your mean value must be different now (a little bit). **(2 points)**
+
+**NOTE:** If you get stuck you may change it manually in the file externally and continue with the next questions but you will not get this point.
+```{r echo=T, eval=T}
+# Enter your RND value below and print it out.
+# RND = 15
+mean(AvsB$Ampg)
+#before change the first value
+
+RND <- 15
+NewAmpg <- replace(AvsB$Ampg, 1, 18 + (RND / 10))
+
+mean(NewAmpg)
+# 
+
+```
+
+**(4)** Plot one figure with both boxplots in different colors. Edit the labels in the $x,y$ axes and the $x-$tick labels for the each variable (per boxplot).
+**(2 points)**
+
+**NOTE:** you will get only **1 point** for a simple boxplot, namely without formatting the labels of axis and  $x-$tick.
+```{r echo=T, eval=T}
+
+boxplot(AvsB, col = c("blue", "green"), 
+        xlab = "I dont know what to write here", ylab = "This one too",
+        names = c("Country A", "Country B"))
+
+```
+
+**(5)** Test the hypothesis that the samples means are equal (assume that their variances are equal and $\alpha=0.05$). Choose an adequate test-statistic, support with some arguments your choice and check whether the **main assumptions** of the test are fulfilled, for example whether the observations **randomly and normally distributed**. Finally, give a brief interpretation of your result.
+**(3 points)**
+
+**NOTE:** You will get **1 point** for choosing the correct statistical test, **1 point** for giving correct answer regarding the assumptions $\&$ the relevant code/figure(s) to support it and **1 point** for the correct answer/interpretation of the obtained result. 
+
+**Answer:** **\textcolor{blue}{We will perform two sample t test because we want to compare the 2 mean of the data}**
+
+```{r, echo=T, eval=T}
+# Check for assumptions
+
+qqnorm(AvsB$Ampg)
+qqline(AvsB$Ampg,col="red")
+
+qqnorm(AvsB$Bmpg)
+qqline(AvsB$Bmpg,col="blue")
+
+```
+
+```{r echo=T, eval=T}
+# Perform the statistical test. 
+# Perform the statistical test. 
+t.test(AvsB$Ampg, AvsB$Bmpg, var.equal= TRUE)
+
+```
+
+**Answer:** **\textcolor{blue}{Interpretation of the obtained result: we fail to reject}**

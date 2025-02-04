@@ -1,0 +1,464 @@
+---
+title: "Descriptive statistics and graphics"
+author: "Thanos Manos"
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+  html_document: default
+  word_document: default
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(message=FALSE, echo = TRUE, eval = TRUE, tidy.opts=list(width.cutoff=40)) 
+```
+
+```{r}
+library(ISwR)
+```
+
+
+Before going into the actual statistical modelling and analysis of a data set, it is often useful to make some simple characterizations of the data in terms of summary statistics and graphics.
+
+## Summary statistics for a single group
+It is easy to calculate simple summary statistics with R. Here is how to calculate the mean, standard deviation, variance, and median.
+
+```{r}
+x <- rnorm(50)
+mean(x)
+sd(x)
+var(x)
+median(x)
+```
+
+Notice that the example starts with the generation of an artificial data vector x of 50 normally distributed observations. It is used in examples throughout this section. When reproducing the examples, you will not get exactly the same results since your random numbers will differ. 
+
+Empirical quantiles may be obtained with the function quantile like this:
+```{r}
+quantile(x)
+```
+
+As you see, by default you get the minimum, the maximum, and the three quartiles — the 0.25, 0.50, and 0.75 quantiles — so named because they correspond to a division into four parts. Similarly, we have deciles for 0.1, 0.2, . . . , 0.9, and centiles or percentiles. The difference between the first and third quartiles is called the interquartile range (IQR) and is sometimes used as a robust alternative to the standard deviation. It is also possible to obtain other quantiles; this is done by adding an argument containing the desired percentage points. This, for example, is how to get the deciles:
+```{r}
+pvec <- seq(0,1,0.1)
+pvec
+```
+
+Be aware that there are several possible definitions of empirical quantiles. The one R uses by default is based on a sum polygon where the $i-$th ranking observation is the $(i − 1)/(n − 1)$ quantile and intermediate quantiles are obtained by linear interpolation. It sometimes confuses students that in a sample of 10 there will be 3 observations below the first quartile with this definition. Other definitions are available via the type argument to quantile.
+
+If there are missing values in data, things become a bit more complicated. For illustration, we use the following example.
+The data set **juul** contains variables from an investigation performed by Anders Juul (Rigshospitalet, Department for Growth and Reproduction) concerning serum IGF-I (insulin-like growth factor) in a group of healthy humans, primarily schoolchildren. The data set is contained in the **ISwR package** and contains a number of variables, of which we only use **igf1** (serum IGF-I) for now, but later in the chapter we also use tanner (Tanner stage of puberty, a classification into five groups based on appearance of primary and secondary sexual characteristics), sex, and menarche (indicating whether or not a girl has had her first period).
+
+Attempting to calculate the mean of igf1 reveals a problem.
+```{r}
+attach(juul)
+mean(igf1)
+```
+
+R will not skip missing values unless explicitly requested to do so. The mean of a vector with an unknown value is unknown. However, you can give the na.rm argument (not available, remove) to request that missing values be removed:
+```{r}
+mean(igf1,na.rm=T)
+```
+
+There is one slightly annoying exception: The length function will not understand na.rm, so we cannot use it to count the number of nonmissing measurements of igf1. However, you can use
+```{r}
+sum(!is.na(igf1))
+```
+
+The construction above uses the fact that if logical values are used in arithmetic, then $TRUE$ is converted to 1 and $FALSE$ to 0. A nice summary display of a numeric variable is obtained from the summary function:
+```{r}
+summary(igf1)
+```
+
+The 1st Qu. and 3rd Qu. refer to the empirical quartiles (0.25 and 0.75 quantiles). In fact, it is possible to summarize an entire data frame with:
+```{r}
+summary(juul)
+```
+
+The data set has menarche, sex, and tanner coded as numeric variables even though they are clearly categorical. This can be mended as follows:
+```{r}
+detach(juul)
+juul$sex <- factor(juul$sex,labels=c("M","F"))
+juul$menarche <- factor(juul$menarche,labels=c("No","Yes"))
+juul$tanner <- factor(juul$tanner,
+                      labels=c("I","II","III","IV","V"))
+attach(juul)
+summary(juul)
+```
+
+Notice how the display changes for the factor variables. Note also that juul was detached and reattached after the modification. This is because modifying a data frame does not affect any attached version. It was not strictly necessary to do it here because summary works directly on the data frame whether attached or not. 
+
+In the above, the variables sex, menarche, and tanner were converted to factors with suitable level names (in the raw data these are represented using numeric codes). The converted variables were put back into the data frame juul, replacing the original sex, tanner, and menarche variables. We might also have used the transform function (or within):
+```{r}
+juul <- transform(juul, 
+                sex=factor(sex,labels=c("M","F")),
+                menarche=factor(menarche,labels=c("No","Yes")),
+                tanner=factor(tanner,labels=c("I","II","III","IV","V")))
+```
+
+## Graphical display of distributions
+
+### Histograms
+
+You can get a reasonable impression of the shape of a distribution by drawing a histogram; that is, a count of how many observations fall within specified divisions (“bins”) of the x-axis:
+```{r}
+hist(x)
+```
+
+By specifying $breaks=n$ in the hist call, you get approximately $n$ bars in the histogram since the algorithm tries to create “pretty” cutpoints. You can have full control over the interval divisions by specifying breaks as a vector rather than as a number. Here is an example of accident rates by age group. These are given as a count in age groups 0–4, 5–9, 10–15, 16, 17, 18–19, 20–24, 25–59, and 60–79 years of age. The data can be entered as follows:
+```{r}
+mid.age <- c(2.5,7.5,13,16.5,17.5,19,22.5,44.5,70.5)
+acc.count <- c(28,46,58,20,31,64,149,316,103)
+age.acc <- rep(mid.age,acc.count)
+brk <- c(0,5,10,16,17,18,20,25,60,80)
+hist(age.acc,breaks=brk)
+```
+
+Here the first three lines generate pseudo-data from the table in the book. For each interval, the relevant number of “observations” is generated with an age set to the midpoint of the interval; that is, 28 2.5-year-olds, 46 7.5-year-olds, etc. Then a vector brk of cutpoints is defined (note that the extremes need to be included) and used as the breaks argument to hist.
+
+Notice that you automatically got the “correct” histogram where the area of a column is proportional to the number. The $y-$axis is in density units (that is, proportion of data per x unit), so that the total area of the histogram will be 1. If, for some reason, you want the (misleading) histogram where the column height is the raw number in each interval, then it can be specified using $freq=T$. For equidistant breakpoints, that is the default (because then you can see how many observations have gone into each column), but you can set $freq=F$ to get densities displayed. This is really just a change of scale on the $y-$axis, but it has the advantage that it becomes possible to overlay the histogram with a corresponding theoretical density function.
+
+### Empirical cumulative distribution
+
+The empirical cumulative distribution function is defined as the fraction of data smaller than or equal to $x$. That is, if $x$ is the $k-$th smallest observation, then the proportion $k/n$ of the data is smaller than or equal to $x$ (7/10 if $x$ is no. 7 of 10). The empirical cumulative distribution function can be plotted as follows where $x$ is the simulated data vector:
+```{r}
+n <- length(x)
+plot(sort(x),(1:n)/n,type="s",ylim=c(0,1))
+```
+
+The plotting parameter $type="s"$ gives a step function where $(x, y)$ is the left end of the steps and $ylim$ is a vector of two elements specifying the extremes of the §y-§coordinates on the plot. Recall that **c(...)** is used to create vectors.
+
+Some more elaborate displays of empirical cumulative distribution functions are available via the **ecdf** function. This is also more precise regarding the mathematical definition of the step function.
+
+### Q–Q plots
+
+One purpose of calculating the empirical cumulative distribution function (c.d.f.) is to see whether data can be assumed normally distributed. For a better assessment, you might plot the $k-$th smallest observation against the expected value of the $k-$th smallest observation out of n in a standard normal distribution. The point is that in this way you would expect to obtain a straight line if data come from a normal distribution with any mean and standard deviation.
+
+Creating such a plot is slightly complicated. Fortunately, there is a built-in function for doing it, **qqnorm**. You only have to write:
+```{r}
+qqnorm(x)
+```
+
+As the title of the plot indicates, plots of this kind are also called “Q–Q plots” (quantile versus quantile). Notice that x and y are interchanged relative to the empirical c.d.f. — the observed values are now drawn along the y-axis. You should notice that with this convention the distribution has heavy tails if the outer parts of the curve are steeper than the middle part.
+
+Some readers will have been taught “probability plots”, which are similar but have the axes interchanged. It can be argued that the way R draws the plot is the better one since the theoretical quantiles are known in advance, while the empirical quantiles depend on data. You would normally choose to draw fixed values horizontally and variable values vertically.
+
+### Boxplots
+
+A “boxplot”, or more descriptively a “box-and-whiskers plot”, is a graphical summary of a distribution. The figure below shows boxplots for $IgM$ and its logarithm. 
+
+Here is how a boxplot is drawn in R. The box in the middle indicates “hinges” (nearly quartiles; see the help page for boxplot.stats) and median. The lines (“whiskers”) show the largest or smallest observation that falls within a distance of 1.5 times the box size from the nearest hinge. If any observations fall farther away, the additional points are considered “extreme” values and are shown separately.
+
+The practicalities are these:
+```{r}
+par(mfrow=c(1,2))
+boxplot(IgM)
+boxplot(log(IgM))
+par(mfrow=c(1,1))
+```
+
+A layout with two plots side by side is specified using the **mfrow** graphical parameter. It should be read as “multif rame, rowwise, $1 × 2$ layout”. Individual plots are organized in one row and two columns. As you might guess, there is also an mfcol parameter to plot columnwise. In a $2 × 2$ layout, the difference is whether plot no. 2 is drawn in the top right or bottom left corner.
+
+Notice that it is necessary to reset the layout parameter to **c(1,1)** at the end unless you also want two plots side by side subsequently.
+
+### Summary statistics by groups
+
+When dealing with grouped data, you will often want to have various summary statistics computed within groups; for example, a table of means and standard deviations. To this end, you can use **tapply**. Here is an example concerning the folate concentration in red blood cells according to three types of ventilation during anesthesia:
+```{r}
+attach(red.cell.folate)
+tapply(folate,ventilation,mean)
+```
+
+The **tapply** call takes the folate variable, splits it according to ventilation, and computes the mean for each group. In the same way, standard deviations and the number of observations in the groups can be computed.
+```{r}
+tapply(folate,ventilation,sd)
+tapply(folate,ventilation,length)
+```
+
+Try something like this for a nicer display:
+```{r}
+xbar <- tapply(folate, ventilation, mean)
+s <- tapply(folate, ventilation, sd)
+n <- tapply(folate, ventilation, length)
+cbind(mean=xbar, std.dev=s, n=n)
+```
+
+For the **juul** data, we might want the mean **igf1** by tanner group, but of course we run into the problem of missing values again:
+```{r}
+tapply(igf1, tanner, mean)
+```
+
+We need to get tapply to pass $na.rm=T$ as a parameter to mean to make it exclude the missing values. This is achieved simply by passing it as an additional argument to tapply:
+```{r}
+tapply(igf1, tanner, mean, na.rm=T)
+```
+
+The functions aggregate and by are variations on the same topic. The former is very much like tapply, except that it works on an entire data frame and presents its results as a data frame. This is useful for presenting many variables at once, e.g.:
+```{r}
+aggregate(juul[c("age","igf1")], list(sex=juul$sex), mean, na.rm=T)
+```
+
+Notice that the grouping argument in this case must be a list, even when it is one-dimensional, and that the names of the list elements get used as column names in the output. Notice also that since the function is applied to all columns of the data frame, you may have to choose a subset of columns, in this case the numeric variables.
+
+The indexing variable is not necessarily part of the data frame that is being aggregated, and there is no attempt at “smart evaluation” as there is in subset, so you have to spell out **juul$sex**. You can also use the fact that data frames are list-like and say:
+```{r}
+aggregate(juul[c("age","igf1")], juul["sex"], mean, na.rm=T)
+```
+
+(the “trick” being that indexing a data frame with single brackets yields a data frame as the result).
+
+The **by** function is again similar, but different. The difference is that the function now takes an entire (sub-) data frame as its argument, so that you can for instance summarize the Juul data by sex as follows:
+```{r}
+by(juul, juul["sex"], summary)
+```
+
+The result of the call to by is actually a list of objects that has has been wrapped as an object of class "by" and printed using a print method for that class. You can assign the result to a variable and access the result for each subgroup using standard list indexing.
+
+The same technique can also be used to generate more elaborate statistical analyses for each group.
+
+## Graphics for grouped data
+
+In dealing with grouped data, it is important to be able not only to create plots for each group but also to compare the plots between groups. In this section we review some general graphical techniques that allow us to display similar plots for several groups on the same page. Some functions have specific features for displaying data from more than one group.
+
+### Histograms
+
+We have already seen how to obtain a histogram simply by
+typing **hist(x)**, where x is the variable containing the data. R will then choose a number of groups so that a reasonable number of data points fall in each bin while at the same time ensuring that the cutpoints are “pretty” numbers on the $x-$axis.
+
+It is also mentioned there that an alternative number of intervals can be set via the argument breaks, although you do not always get exactly the number you asked for since R reserves the right to choose “pretty” column boundaries. For instance, multiples of 0.5 MJ are chosen in the following example using the energy data on the 24-hour energy expenditure for two groups of women.
+
+In this example, some further techniques of general use are illustrated. The end result is seen in Figure 4.6, but first we must fetch the data:
+```{r}
+attach(energy)
+expend.lean <- expend[stature=="lean"]
+expend.obese <- expend[stature=="obese"]
+```
+
+Notice how we separate the expend vector in the energy data frame into two vectors according to the value of the factor stature.
+
+Now we do the actual plotting:
+```{r}
+par(mfrow=c(2,1))
+hist(expend.lean,breaks=10,xlim=c(5,13),ylim=c(0,4),col="white")
+hist(expend.obese,breaks=10,xlim=c(5,13),ylim=c(0,4),col="grey")
+ par(mfrow=c(1,1))
+```
+
+We set **par(mfrow=c(2,1))** to get the two histograms in the same plot. In the hist commands themselves, we used the breaks argument as already mentioned and col, whose effect should be rather obvious. We also used xlim and ylim to get the same x and y axes in the two plots. However, it is a coincidence that the columns have the same width.
+
+As a practical remark, when working with plots like the above, where more than a single line of code is required, it gets cumbersome to use command recall in the R console window every time something needs to be changed. A better idea may be to start up a script window or a plain-text editor and cut and paste entire blocks of code from there You might also take it as an incentive to start writing simple functions.
+
+### Parallel boxplots
+
+You might want a set of boxplots from several groups in the same frame. boxplot can handle this both when data are given in the form of separate vectors from each group and when data are in one long vector and a parallel vector or factor defines the grouping. To illustrate the latter, we use the energy data:
+```{r}
+boxplot(expend ~ stature)
+```
+
+We could also have based the plot on the separate vectors **expend.lean** and **expend.obese**. In that case, a syntax is used that specifies the vectors as two separate arguments:
+```{r}
+boxplot(expend.lean,expend.obese)
+```
+
+The plot is not shown here, but the only difference lies in the labelling of the $x-$axis. There is also a third form, where data are given as a single argument that is a list of vectors. The bottom plot has been made using the complete expend vector and the grouping variable **fstature**. Notation of the type y ~ x should be read “y described using x”. This is the first example we see of a model formula.
+
+### Stripcharts
+
+The boxplots made in the preceding section show a “Laurel & Hardy” effect that is not really well founded in the data. The cause is that the interquartile range is quite a bit larger in one group than in the other, making the boxplot appear “fatter”. With groups as small as these, the quartiles will be quite inaccurately determined, and it may therefore be more desirable to plot the raw data. If you were to do this by hand, you might draw a dot diagram where every number is marked with a dot on a number line. R’s automated variant of this is the function stripchart. The four plots were created as follows:
+```{r}
+opar <- par(mfrow=c(2,2), mex=0.8, mar=c(3,3,2,1)+.1)
+stripchart(expend ~ stature)
+stripchart(expend ~ stature, method="stack")
+stripchart(expend ~ stature, method="jitter")
+stripchart(expend ~ stature, method="jitter", jitter=.03)
+par(opar)
+```
+
+Notice that a little **par** magic was used to reduce the spacing between the four plots. The **mex** setting reduces the interline distance, and **mar** reduces the number of lines that surround the plot region. This can be done for these plots since they have neither main title, subtitle, nor $x$ and $y$ labels. 
+
+All the original values of the changed settings can be stored in a variable (here opar) and reestablished with par(opar).
+
+The first plot is a standard stripchart, where the points are simply plotted on a line. The problem with this is that some points can become invisible because they are overplotted. This is why there is a method argument, which can be set to either "stack" or "jitter". 
+
+The former method stacks points with identical values, but it only does so if data are completely identical, so in the upper right plot, it is only the two replicates of 7.48 that get stacked, whereas 8.08, 8.09, and 8.11 are still plotted in almost the same spot.
+
+The “jitter” method offsets all points a random amount vertically. The standard jittering on plot no. 3 (bottom left) is a bit large; it may be preferable to make it clearer that data are placed along a horizontal line. For that purpose, you can set jitter lower than the default of 0.1, which is done in the fourth plot. In this example we have not bothered to specify data in several forms as we did for boxplot but used expend~stature throughout. We could also have written:
+```{r}
+stripchart(list(lean=expend.lean, obese=expend.obese))
+```
+
+but **stripchart(expend.lean, expend.obese)** cannot be used.
+
+## Tables
+
+Categorical data are usually described in the form of tables. This section outlines how you can create tables from your data and calculate relative frequencies.
+
+### Generating tables
+
+We deal mainly with two-way tables. In the first example, we enter a table directly, as is required for tables taken from a book or a journal article. A two-way table can be entered as a matrix object. Here is an example on caffeine consumption by marital status among women giving birth. That table may be input as follows:
+```{r}
+caff.marital <- matrix(c(652,1537,598,242,36,46,38,21,218,327,106,67), nrow=3,byrow=T)
+caff.marital
+```
+
+The matrix function needs an argument containing the table values as a single vector and also the number of rows in the argument nrow. By default, the values are entered columnwise; if rowwise entry is desired, then you need to specify **byrow=T**.
+
+You might also give the number of columns instead of rows using ncol. If exactly one of ncol and nrow is given, R will compute the other one so that it fits the number of values. If both ncol and nrow are given and it does not fit the number of values, the values will be “recycled”, which in some (other!) circumstances can be useful. To get readable printouts, you can add row and column names to the matrices:
+```{r}
+colnames(caff.marital) <- c("0","1-150","151-300",">300")
+rownames(caff.marital) <- c("Married","Prev.married","Single")
+caff.marital
+```
+
+Furthermore, you can name the row and column names as follows. This is particularly useful if you are generating many tables with similar classification criteria:
+```{r}
+names(dimnames(caff.marital)) <- c("marital","consumption")
+caff.marital
+```
+
+Actually, tables are not completely equivalent to matrices. There is a "table" class for which special methods exist, and you can convert to that class using as.table(caff.marital). The table function below returns an object of class "table".
+
+For most elementary purposes, you can use matrices where two-dimensional tables are expected. One important casewhere you do need **as.table** is when converting a table to a data frame of counts:
+```{r}
+as.data.frame(as.table(caff.marital))
+```
+
+In practice, the more frequent case is that you have a data frame with variables for each person in a data set. In that case, you should do the tabulation with **table, xtabs, or ftable**. These functions will generally work for tabulating numeric vectors as well as factor variables, but the latter will have their levels used for row and column names automatically. Hence, it is recommended to convert numerically coded categorical data into factors. The table function is the oldest and most basic of the three. The two others offer formula-based interfaces and better printing of multiway tables.
+
+The data set juul was introduced ealrier. Here we look at some other variables in that data set, namely sex and menarche; the latter indicates whether or not a girl has had her first period. We can generate some simple tables as follows:
+```{r}
+table(sex)
+```
+
+
+```{r}
+table(sex,menarche)
+```
+
+```{r}
+table(menarche,tanner)
+```
+
+Of course, the table of menarche versus sex is just a check on internal consistency of the data. The table of menarche versus Tanner stage of puberty is more interesting.
+
+There are also tables with more than two sides, but not many simple statistical functions use them. Briefly, to tabulate such data, just write, for example, **table(factor1,factor2,factor3)**. To input a table of cell counts, use the array function (an analogue of matrix).
+
+The **xtabs** function is quite similar to **table** except that it uses a model formula interface. This most often uses a one-sided formula where you just list the classification variables separated by $+$.
+```{r}
+xtabs(~ tanner + sex, data=juul)
+```
+
+Notice how the interface allows you to refer to variables in a data frame without attaching it. The empty left-hand side can be replaced by a vector of counts in order to handle pretabulated data.
+
+The formatting of multiway tables from table or xtabs is not really nice:
+```{r}
+xtabs(~ dgn + diab + coma, data=stroke)
+```
+
+As you add dimensions, you get more of these two-sided subtables and it becomes rather easy to lose track. This is where ftable comes in. This function creates “flat” tables; e.g., like this:
+```{r}
+ftable(coma + diab ~ dgn, data=stroke)
+```
+
+That is, variables on the left-hand side tabulate across the page and those on the right tabulate downwards. ftable works on raw data as shown, but its data argument can also be a table as generated by one of the other functions.
+
+Like any matrix, a table can be transposed with the t function:
+```{r}
+t(caff.marital)
+```
+
+For multiway tables, exchanging indices (generalized transposition) is done by **aperm**.
+
+### Marginal tables and relative frequency
+
+It is often desired to compute marginal tables; that is, the sums of the counts along one or the other dimension of a table. Due to missing values, this might not coincide with just tabulating a single factor. This is done fairly easily using the apply function, but there is also a simplified version called margin.table, described below.
+
+First, we need to generate the table itself:
+```{r}
+tanner.sex <- table(tanner,sex)
+```
+
+(tanner.sex is an arbitrarily chosen name for the crosstable.)
+
+```{r}
+tanner.sex
+```
+
+Then we compute the marginal tables:
+```{r}
+margin.table(tanner.sex,1)
+```
+
+The second argument to margin.table is the number of the marginal index: 1 and 2 give row and column totals, respectively. 
+
+Relative frequencies in a table are generally expressed as proportions of the row or column totals. Tables of relative frequencies can be constructed using **prop.table** as follows:
+```{r}
+prop.table(tanner.sex,1)
+```
+
+Note that the rows (1st index) sum to 1. If a table of percentages is desired,just multiply the entire table by 100. **prop.table** cannot be used to express the numbers relative to the grand total of the table, but you can of course always write:
+```{r}
+tanner.sex/sum(tanner.sex)
+```
+
+The functions **margin.table** and **prop.table** also work on multiway tables — the margin argument can be a vector if the relevant **margin** has two or more dimensions.
+
+## Graphical display of tables
+
+For presentation purposes, it may be desirable to display a graph rather than a table of counts or percentages. In this section, the main methods for doing this are described.
+
+### Barplots
+
+Barplots are made using barplot. This function takes an argument, which can be a vector or a matrix. The simplest variant goes as follows:
+```{r}
+total.caff <- margin.table(caff.marital,2)
+total.caff
+```
+
+```{r}
+barplot(total.caff, col="white")
+```
+
+Without the **col="white"** argument, the plot comes out in colour, but this is not suitable for a black and white book illustration.
+
+If the argument is a matrix, then barplot creates by default a “stacked barplot”, where the columns are partitioned according to the contributions from different rows of the table. If you want to place the row contributions beside each other instead, you can use the argument **beside=T**. A series of variants is found below:
+```{r}
+par(mfrow=c(2,2))
+barplot(caff.marital, col="white")
+barplot(t(caff.marital), col="white")
+barplot(t(caff.marital), col="white", beside=T)
+barplot(prop.table(t(caff.marital),2), col="white", beside=T)
+par(mfrow=c(1,1))
+```
+
+In the last three plots, we switched rows and columns with the transposition function t. In the very last one, the columns are expressed as proportions of the total number in the group. Thus, information is lost on the relative sizes of the marital status groups, but the group of previously married women (recall that the data set deals with women giving birth) is so small that it otherwise becomes almost impossible to compare their caffeine consumption profile with those of the other groups.
+
+As usual, there are a multitude of ways to “prettify” the plots. Here is one possibility:
+```{r}
+barplot(prop.table(t(caff.marital),2),
+        beside=T, legend.text=colnames(caff.marital),
+        col=c("white","grey80","grey50","black"))
+```
+
+Notice that the legend overlaps the top of one of the columns. R is not designed to be able to find a clear area in which to place the legend. However, you can get full control of the legend’s position if you insert it explicitly with the legend function. For that purpose, it will be helpful to use locator(), which allows you to click a mouse button over the plot and have the coordinates returned. See p. 209 for more about this.
+
+### Dotcharts
+
+The Cleveland dotcharts, named after William S. Cleveland (1994), can be employed to study a table from both sides at the same time. They contain the same information as barplots with $beside=T$ but give quite a different visual impression. We content ourselves with a single example here:
+```{r}
+dotchart(t(caff.marital), lcolor="black")
+```
+
+### Piecharts
+
+Piecharts are traditionally frowned upon by statisticians because they are so often used to make trivial data look impressive and are difficult to decode for the human mind. They very rarely contain information that would not have been at least as effectively conveyed in a barplot. Once in a while they are useful, though, and it is no problem to get R to draw them. Here is a way to represent the table of caffeine consumption versus marital status:
+```{r}
+opar <- par(mfrow=c(2,2),mex=0.8, mar=c(1,1,2,1))
+slices <- c("white","grey80","grey50","black")
+pie(caff.marital["Married",], main="Married", col=slices)
+pie(caff.marital["Prev.married",], main="Previously married", col=slices)
+pie(caff.marital["Single",], main="Single", col=slices)
+par(opar)
+```
+
+The col argument sets the colour of the pie slices. There are more possibilities with piechart. The help page for pie contains an illustrative example concerning the distribution of pie sales $(!)$ by pie type.
