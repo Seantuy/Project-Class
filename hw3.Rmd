@@ -1,0 +1,142 @@
+---
+title: "Homework 3"
+author: 'Group 8: Nguyen Nhi, Mon Daniel, Sean Paolo, Gandiboyina Ethan'
+date: "2024-03-20"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+ step 1 the text file containing the data is called **priming.txt**. You can download the data and load them from your project directory into R as a new dataframe called priming by running the following (**make changes according to your paths and OS**):
+```{r}
+#we load the priming database
+Cawfee <- read.table(file = "H:/Downloads/HWA03 (1)/HWA03/priming.txt",
+                      stringsAsFactors = FALSE)
+
+head(Cawfee)
+```
+-step 2 Get to know the data using View(), summary(), head() and str().
+``` {r}
+#we apply the functions to the priming database
+View(priming)
+head(priming)
+summary(priming)
+str(priming)
+```
+-step 3 Look at the names of the dataframe with names(). Those aren’t very informative are they? Change the
+ names to the correct values (make sure to use the naming scheme I describe in the dataset description).
+```{r}
+#we use the function names to check the default names of the priming database
+names(priming)
+#we change the column names using the colname function
+colnames(priming)<-c("id","sex","age","attention", "prime", "prime duration", "grandparents","walk")
+#we check the new names of the priming database
+names(priming)
+```
+-Step 4 What was the mean participant age? Answer this in two ways. First, calculate the mean directly from
+ the age column. Second, create a new vector object called age.v that contains the age data, then calculate
+ the mean age from this vector. Do you get the same result?
+```{r}
+#we use the mean function to calculate the mean participant age
+mean(priming$age)
+#we repeat the calculation using the second method
+age.v<-c(priming$age)
+mean(age.v)
+```
+ I got the same result 21.996
+ step 5 what was the median walking time
+```{r}
+#we use the median function to calculate the median walking time
+median(priming$walk)
+```
+-step 6 How many females were there? How many males?
+```{r}
+#we use the table function to display the count of males and females
+table(priming$sex)
+```
+-step 7 What percent of participants passed the attention check? (Hint: To calculate a percentage from a 0, 1
+ variable, use mean())
+```{r}
+mean(priming$attention==1)# percentage of participants that passed the attention check
+```
+-step 8 Walking time is currently in seconds. Add a new column to the dataframe called walk_m that shows the
+ walking time in minutes rather than seconds
+```{r}
+# we use the cbind function to add the walking time in minutes
+priming<-cbind(priming,walk_min=(c(priming$walk)/60))
+head(priming)
+```
+-step 9 What were the sexes of the first 10 participants?
+```{r}
+s10<-priming[1:10,c("id","sex")] # we select the id and sex column of the priming datasets
+colnames(s10)[1]="Participant id"# we change the name of the first column
+print(s10)
+
+```
+-step 10 What was the data for the 50th participant?
+ Try answering these questions using one of the methods in the Examples above. The easiest method is
+ Method 1. That is, first create a new dataframe object of the subsetted data, and then calculate the
+ summary data from this new object.
+```{r}
+d50<-subset(priming,id==50) #we subset the priming dataset to by the id value
+summary(d50)
+```
+-step 11 What was the mean walking time for the elderly prime condition?
+```{r}
+mean(subset(priming,prime=="elderly")$walk)# we subset the priming data set and then use the mean function on the subsetted database to show the mean walking time of elderly prime condition 
+```
+-step 12 What was the mean walking time for the neutral prime condition?
+```{r}
+mean(subset(priming,prime=="neutral")$walk) # we subset the priming data set and then use the mean function on the subsetted database to show the mean walking time for the neutral prime condition
+```
+-step 13 What was the mean walking time for participants less than 23 years old?
+```{r}
+mean(subset(priming,age<23)$walk) # we subset the priming data set and then use the mean function on the subsetted database to show the mean walking time for participants less than 23 years old
+```
+-step 14 What was the mean walking time for females with a close relationship with their grandparents?
+```{r}
+print(mean(subset(priming,sex=="f" & grandparents=="yes")$walk)) # we subset the priming data set and then use the mean function on the subsetted database to show the mean walking time for females with a close relationship with their grandparents
+```
+-step 15 What was the mean walking time for males over 21 years old without a close relationship with their grandparents?
+```{r}
+print(mean(subset(priming,sex=="m" & (grandparents=="no"| grandparents=="none") & age>21)$walk))# we subset the priming data set and then use the mean function on the subsetted database to show the mean walking time for males over 21 years old without a close relationship with their grandparents
+```
+ 
+-step 16 One of your colleagues wants the study data, but only the columns id, prime, and walk. Create a new
+ dataframe called priming_simple that only contains these columns.
+```{r}
+priming_simple<- priming[,c(1,5,8)] #we choose the 3 desired columns of the priming dataset
+head(priming_simple)
+```
+-step 17 Some of the data don’t make any sense. For example, some walking times are negative, some prime
+ values aren’t correct, and some prime.duration values weren’t part of the original study plan. Create a
+ new dataframe called priming_c (aka., priming clean) that only includes rows with valid values for each
+ column – do this by looking for an few strange values in each column, and by looking at the original dataset
+ description. Additionally, only include participants who passed the attention check.
+```{r}
+colnames(priming)[6]="prime.duration"
+priming_c<-subset(priming,subset = sex %in% c("f","m") &
+                   age > 18 &
+                   attention %in% c(0,1) &
+                   prime %in% c("elderly","neutral") &
+                   prime.duration %in% c(1,5,10,30) &
+                   grandparents %in% c("yes","no","none") &
+                   walk > 0) # we subset the priming dataset in order to remove the rows with values outside of the desired intervals
+head(priming_c)
+```
+-step 18 How many participants gave valid data and passed the attention check? (Hint: Use the result from your previous answer!)
+```{r}
+table(priming_c$attention)# we get the count of the the participants who have passed and not passed the attention check
+# the number of participants that passed is 291
+```
+-step 19 Of those participants who gave valid data and passed the attention check, what was the mean walking
+ time of those given the elderly and neutral prime (calculate these separately).
+```{r}
+# we subset the priming_c data set and then use the mean function on the subsetted database to show the mean walking time of those given the elderly and neutral prime
+mean(subset(priming_c, attention==1 & prime=="elderly")$walk)
+mean(subset(priming_c, attention==1 & prime=="neutral")$walk)
+```

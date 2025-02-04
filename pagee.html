@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="pageee.css" />
+    <title>Map</title>
+    <style>
+        /* Add your existing styles here */
+        .resource-slider {
+            position: fixed;
+            top: 0;
+            right: -300px; /* Initially hidden */
+            width: 300px;
+            height: 100%;
+            background-color: #f9f9f9;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: right 0.5s ease;
+            z-index: 1000; /* Ensure it's on top of other content */
+        }
+
+        .resource-slider.active {
+            right: 0;
+        }
+
+        .resource-slider-content {
+            padding: 20px;
+        }
+
+        .resource-slider-content a {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- MENU BAR-->
+    <div class="topnav" style="background-image: url('path/to/image.jpg');">
+        <a class="active" href="#Resources">Resources</a>
+        <a href="#Cities">Cities</a>
+        <!-- Add more menu items here -->
+        <!-- LEFT TO RIGHT DROPDOWN MENU -->
+        <button class="dropbtn" onclick="toggleSlider('resources')">RESOURCES</button>
+        <button class="dropbtn" onclick="toggleSlider('regions')">REGIONS</button>
+        <button class="dropbtn" onclick="toggleSlider('army')">ARMY</button>
+    </div>
+
+    <!-- ADD - MAP CONTAINER -->
+    <div id="map" class="map"> </div>
+
+    <!-- RESOURCE SLIDER -->
+    <div class="resource-slider" id="resourceSlider">
+        <div class="resource-slider-content">
+            <a href="denarii">denarii</a>
+            <a href="victualia">victualia</a>
+            <a href="lignum">lignum</a>
+            <a href="ferrum">ferrum</a>
+            <a href="petra">petra</a>
+            <a href="manupretium">manupretium</a>
+            <a href="ordo">ordo</a>
+        </div>
+    </div>
+
+    <!--PROGRESS BAR-->
+    <div class="Progress">
+        <a href="Wellbeing">Wellbeing</a>
+        <a href="Food">Food</a>
+        <a href="Money">Money</a>
+        <a href="Power">Power</a>
+        <!--Progressbar itself-->
+        <span id="myProgress">
+            <span id="myBar">0%</span>
+        </span>
+    </div>
+
+    <div id="alertbox" class="alertbox">
+        <p id="alertbox-msg">Message</p>
+        <button id="alertbox-okay">OKAY</button>
+    </div>
+
+    <!-- POP UP INFO (modified later in JS) -->
+    <div id="popup" class="popup">
+        <h2>Region Info</h2>
+        <p>changed in js</p>
+        <button id="closeButton">CLOSE</button>
+        <button id="buildButton">BUILD</button>
+        <button id="troopsButton">TROOPS</button>
+    </div>
+
+    <div id="buildpop" class="buildpop" style="display: none;">
+        <h2>BUILD</h2>
+        <button id="forum">Forum</button>
+        <button id="bath">Bath</button>
+        <button id="aqueduct">Aqueduct</button>
+        <button id="amphitheater">Amphitheater</button>
+        <button id="temple">Temple</button>
+        <button id="barracks">Barracks</button>
+        <button id="stable">Stable</button>
+        <button id="closeBuildButton">CLOSE</button>
+    </div>
+    
+    <div id="troopspop" class="troopspop" style="display: none;">
+        <h2>TROOPS</h2>
+        <button id="hastati">Hastati</button>
+        <button id="legionnaires">Legionnaires</button>
+        <button id="auxillaries">Auxillaries</button>
+        <button id="equites">Equites</button>
+        <button id="closeTroopsButton">CLOSE</button>
+    </div>
+
+    <script src="mappp.js"></script>
+    <script>
+        // Add your existing JavaScript code here
+
+        function toggleSlider(type) {
+            var slider = document.getElementById("resourceSlider");
+            slider.classList.toggle("active");
+            if (type === 'resources') {
+                // Load resource data
+            } else if (type === 'regions') {
+                // Load region data
+            } else if (type === 'army') {
+                // Load army data
+            }
+        }
+    </script>
+</body>
+</html>

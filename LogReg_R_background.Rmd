@@ -1,0 +1,335 @@
+---
+title: "Logistic Regression in R (background)"
+author: 'MANOS Thanos'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document:
+        latex_engine: xelatex
+---
+
+
+Sometimes you wish to model binary outcomes, variables that can have only two possible values: diseased or nondiseased, and so forth. For instance, you want to describe the risk of getting a disease depending on various kinds of exposures. Here we discuss some simple techniques based on tabulation, but you might also want to model dose-response relationships (where the predictor is a continuous variable) or model the effect of multiple variables simultaneously. It would be very attractive to be able to use the same modelling techniques as for linear models.
+
+However, it is not really attractive to use additive models for probabilities since they have a limited range and regression models could predict off-scale values below zero or above 1. It makes better sense to model the probabilities on a transformed scale; this is what is done in logistic regression analysis.
+
+
+A linear model for transformed probabilities can be set up as
+$$logit~p = b_0 + b_1x_1 + b_2x_2 + . . . + b_kx_k$$
+in which $logit~p = log[p/(1− p)]$ is the log odds. A constant additive effect on the logit scale corresponds to a constant odds ratio. The choice of the logit function is not the only one possible, but it has some mathematically convenient properties. Other choices do exist; the probit function (the quantile function of the normal distribution) or $log(−log p)$, which has a connection to survival analysis models.
+
+
+One thing to notice about the logistic model is that there is no error term as in linear models.We are modelling the probability of an event directly, and that in itself will determine the variability of the binary outcome. There is no variance parameter as in the normal distribution. 
+
+The parameters of the model can be estimated by the method of maximum likelihood. This is a quite general technique, similar to the least-squares method in that it finds a set of parameters that optimizes a goodness-of-fit
+criterion (in fact, the least-squares method itself is a slightly modified maximum-likelihood procedure). The likelihood function L(b) is simply the probability of the entire observed data set for varying parameters.
+
+The deviance is the difference between the maximized value of $−2 log L$ and the similar quantity under a “maximal model” that fits data perfectly. Changes in deviance caused by a model reduction will be approximately $\chi^2$-distributed with degrees of freedom equal to the change in the number of parameters.
+
+Here, we see how to perform logistic regression analysis in R. There naturally is quite a large overlap with the material on linear models since the description of models is quite similar, but there are also some special issues concerning deviance tables and the specification of models for pretabulated data.
+
+## Generalized linear models
+
+Logistic regression analysis belongs to the class of generalized linear models. These models are characterized by their response distribution (here the binomial distribution) and a link function, which transfers the mean value to a scale in which the relation to background variables is described as linear ans additive. In a logistic regression analysis, the link function is
+$logit~p = log[p/(1− p)]$.
+
+There are several other examples of generalized linear models; for instance, analysis of count data is often handled by the multiplicative Poisson model, where the link function is log l, with l the mean of the Poisson-distributed observation. All of these models can be handled using the same algorithm, which also allows the user some freedom to define his or her own models by defining suitable link functions. 
+
+In R generalized linear models are handled by the glm function. This function is very similar to lm, which we have used many times for linear normal models. The two functions use essentially the same model formulas and extractor functions (*summary*, etc.), but *glm*  also needs to have specified which generalized linear model is desired. This is done via the family argument. To specify a binomial model with logit link (i.e., logistic regression analysis), you write *family=binomial("logit")*.
+
+## Logistic regression on tabular data
+In this section, we analyze the example concerning hypertension data (Altman 1991, p. 353). First, we need to enter data, which is done as
+follows:
+```{r}
+library(ISwR)
+no.yes <- c("No","Yes")
+smoking <- gl(2,1,8,no.yes)
+obesity <- gl(2,2,8,no.yes)
+snoring <- gl(2,4,8,no.yes)
+n.tot <- c(60,17,8,2,187,85,51,23)
+n.hyp <- c(5,2,1,0,35,13,15,8)
+data.frame(smoking,obesity,snoring,n.tot,n.hyp)
+```
+
+The **gl** function to “generate levels”. The first three arguments to gl are, respectively, the number of levels, the repeat count of each level, and the total length of the vector. A fourth argument can be used to specify the level names of the resulting factor. The result is apparent from the printout of the generated variables. They were put together in a data frame to get a nicer layout. Another way of generating a regular pattern like this is to use expand.grid:
+```{r}
+expand.grid(smoking=no.yes, obesity=no.yes, snoring=no.yes)
+```
+R is able to fit logistic regression analyses for tabular data in two different ways. You have to specify the response as a matrix, where one column is the number of “diseased” and the other is the number of “healthy” (or “success” and “failure”, depending on context).
+
+```{r}
+hyp.tbl <- cbind(n.hyp,n.tot-n.hyp)
+hyp.tbl
+```
+
+The cbind function (“c” for “column”) is used to bind variables together, columnwise, to form a matrix. Note that it would be a horrible mistake to use the total count for column 2 instead of the number of failures.
+
+Then, you can specify the logistic regression model as:
+```{r}
+glm(hyp.tbl~smoking+obesity+snoring,family=binomial("logit"))
+```
+
+Actually, "logit" is the default for binomial and the family argument is the second argument to glm, so it suffices to write:
+
+```{r}
+glm(hyp.tbl~smoking+obesity+snoring,binomial)
+```
+
+The other way to specify a logistic regression model is to give the proportion of diseased in each cell:
+```{r}
+prop.hyp <- n.hyp/n.tot
+glm.hyp <- glm(prop.hyp~smoking+obesity+snoring,
+               binomial,weights=n.tot)
+```
+
+
+It is necessary to give weights because R cannot see how many observations a proportion is based on.
+
+Let's take a moment and see the output produced above.
+
+Note that it is in a minimal style similar to that used for printing lm objects. Also in the result of glm is some nonvisible information, which may be extracted with particular functions. You can, for instance, save the result of a fit of a generalized linear model in a variable and obtain a table of regression coefficients and so forth using summary:
+
+```{r}
+glm.hyp <- glm(hyp.tbl~smoking+obesity+snoring,binomial)
+summary(glm.hyp)
+```
+
+In the following, we go through the components of summary output for generalized linear models:
+
+```
+Call:
+ glm(formula = hyp.tbl ~ smoking + obesity + snoring, family = ...)
+```
+
+As usual, we start off with a repeat of the model specification. Obviously, more interesting is when the output is not viewed in connection with the function call that generated it.
+
+```
+Deviance Residuals: 
+       1         2         3         4         5         6  
+-0.04344   0.54145 -0.25476 -0.80051  0.19759 -0.46602 
+       7        8 
+-0.21262  0.56231 
+```
+
+This is the contribution of each cell of the table to the deviance of the model (the deviance corresponds to the sum of squares in linear normal models), with a sign according to whether the observation is larger or smaller than expected. They can be used to pinpoint cells that are particularly poorly fitted, but you have to be wary of the interpretation in sparse tables.
+
+```
+Coefficients:
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept) -2.37766    0.38018  -6.254    4e-10 ***
+smokingYes  -0.06777    0.27812  -0.244   0.8075    
+obesityYes   0.69531    0.28509   2.439   0.0147 *  
+snoringYes   0.87194    0.39757   2.193   0.0283 *  
+---
+Signif. codes:  
+0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+```
+
+This is the table of primary interest. Here, we get estimates of the regression coefficients, standard errors of same, and tests for whether each regression coefficient can be assumed to be zero. The layout is nearly identical to the corresponding part of the ```lm``` output. 
+
+The note about the dispersion parameter is related to the fact that the binomial variance depends entirely on the mean. There is no scale parameter like the variance in the normal distribution.
+
+```
+    Null deviance: 14.1259  on 7  degrees of freedom
+Residual deviance:  1.6184  on 4  degrees of freedom
+AIC: 34.537
+```
+
+“Residual deviance” corresponds to the residual sum of squares in ordinary regression analyses which is used to estimate the standard deviation about the regression line. In binomial models, however, the standard deviation of the observations is known, and you can therefore use the deviance in a test for model specification. The AIC (Akaike information criterion) is
+a measure of goodness of fit that takes the number of fitted parameters into account.
+
+R is reluctant to associate a p-value with the deviance. This is just as well because no exact p-value can be found, only an approximation that is valid for large expected counts. In the present case, there are actually a couple of places where the expected cell count is rather small.
+
+The asymptotic distribution of the residual deviance is a $\chi^2$ distribution with the stated degrees of freedom, so even though the approximation may be poor, nothing in the data indicates that the model is wrong (the 5% significance limit is at 9.49 and the value found here is 1.62).
+
+The null deviance is the deviance of a model that contains only the intercept (that is, describes a fixed probability, here for hypertension, in all cells). What you would normally be interested in is the difference from the residual deviance, here $14.13−1.62 = 12.51$, which can be used for a joint test for whether any effects are present in the model. In the present case, a p-value of approximately 0.6% is obtained.
+
+```
+Number of Fisher Scoring iterations: 4
+```
+
+This refers to the actual fitting procedure and is a purely technical item. There is no statistical information in it, but you should keep an eye on whether the number of iterations becomes too large because that might be a sign that the model is too complex to fit based on the available data. Normally, ```glm```  halts the fitting procedure if the number of iterations exceeds 25, but it is possible to configure the limit.
+
+The fitting procedure is iterative in that there is no explicit formula that can be used to compute the estimates, only a set of equations that they should satisfy. However, there is an approximate solution of the equations if you supply an initial guess at the solution. This solution is then used as a starting point for an improved solution, and the procedure is repeated until the guesses are sufficiently stable. 
+
+A table of correlations between parameter estimates can be obtained via the optional argument ```corr=T``` to ```summary``` (this also works for linear models). It looks like this:
+
+```
+Correlation of Coefficients:
+(Intercept) smokingYes obesityYes
+smokingYes -0.1520
+obesityYes -0.1361 -9.499e-05
+snoringYes -0.8965 -6.707e-02 -0.07186
+```
+
+It is seen that the correlation between the estimates is fairly small, so that it may be expected that removing a variable from the model does not change the coefficients and p-values for other variables much. (The correlations between the regression coefficients and intercept are not very informative; they mostly relate to whether the variable in question has many or few observations in the “Yes” category.)
+
+The z test in the table of regression coefficients immediately shows that the model can be simplified by removing smoking. The result then looks as follows (abbreviated):
+```{r}
+glm.hyp <- glm(hyp.tbl~obesity+snoring,binomial)
+summary(glm.hyp)
+```
+
+## The analysis of deviance table
+
+Deviance tables correspond to ANOVA tables for multiple regression analyses and are generated like these with the anova function:
+```{r}
+glm.hyp <- glm(hyp.tbl~smoking+obesity+snoring,binomial)
+anova(glm.hyp, test="Chisq")
+```
+
+Notice that the Deviance column gives differences between models as variables are added to the model in turn. The deviances are approximately $\chi^2$-distributed with the stated degrees of freedom. It is necessary to add the ```test="chisq"``` argument to get the approximate $\chi^2$ tests.
+
+Since the snoring variable on the last line is significant, it may not be removed from the model and we cannot use the table to justify model reductions. If, however, the terms are rearranged so that smoking comes last, we get a deviance-based test for removal of that variable:
+```{r}
+glm.hyp <- glm(hyp.tbl~snoring+obesity+smoking,binomial)
+anova(glm.hyp, test="Chisq")
+```
+From this you can read that ```smoking``` is removable, whereas ```obesity``` is not, after removal of ```smoking```.
+
+For good measure, you should also set up the analysis with the two remaining explanatory variables interchanged, so that you get a test of whether ```snoring``` may be removed from a model that also contains ```obesity```:
+```{r}
+glm.hyp <- glm(hyp.tbl~obesity+snoring,binomial)
+anova(glm.hyp, test="Chisq")
+```
+
+An alternative method is to use drop1 to try removing one term at a time:
+```{r}
+drop1(glm.hyp, test="Chisq")
+```
+
+Here LRT is the likelihood ratio test, another name for the deviance change.
+
+The information in the deviance tables is fundamentally the same as that given by the z tests in the table of regression coefficients. The results may differ due to the use of different approximations, though. From theoretical considerations, the deviance test is preferable, but in practice the difference is often small because of the large-sample approximation $\chi^2 \approx z^2$ for tests with a single degree of freedom. However, to test factors with more than two categories, you have to use the deviance table because the z tests only relate to some of the possible group comparisons. Also, the small-sample situation requires special attention; see the next section.
+
+
+## Logistic regression using raw data
+
+In this section, we again use Anders Juul’s data (see previous Rmarkdown files). For easy reference, here is how to read data and convert the variables that describe groupings into factors (this time slightly simplified):
+```{r}
+juul$menarche <- factor(juul$menarche, labels=c("No","Yes"))
+juul$tanner <- factor(juul$tanner)
+```
+
+In the following, we look at menarche as the response variable. This variable indicates for each girl whether or not she has had her first period. It is coded 1 for “no” and 2 for “yes”. It is convenient to look at a subset of data consisting of 8–20-year-old girls. This can be extracted as follows:
+```{r}
+juul.girl <- subset(juul,age>8 & age<20 & 
+                      complete.cases(menarche))
+attach(juul.girl)
+```
+
+For obvious reasons, no boys have a nonmissing menarche, so it is not necessary to select on gender explicitly.
+
+Then you can analyze menarche as a function of age like this:
+```{r}
+summary(glm(menarche~age,binomial))
+```
+
+The response variable ```menarche``` is a factor with two levels, where the last level is considered the event. It also works to use a variable that has the values 0 and 1 (but not, for instance, 1 and 2!).
+
+Notice that from this model you can estimate the median menarcheal age as the age where $logit~p = 0$. A little thought (solve −20.0132 + 1.5173 × age = 0) reveals that it is 20.0132/1.5173 = 13.19 years.
+
+You should not pay too much attention to the deviance residuals in this case since they automatically become large in every case where the fitted probability “goes against” the observations (which is bound to happen in some cases). The residual deviance is also difficult to interpret when there is only one observation per cell.
+
+A hint of a more complicated analysis is obtained by including the Tanner stage of puberty in the model. You should be warned that the exact interpretation of such an analysis is quite tricky and qualitatively different from the analysis of ```menarche``` as a function of age. It can be used for prediction purposes (although asking the girl whether she has had her first period would likely be much easier than determini
+
+```{r}
+summary(glm(menarche~age+tanner,binomial))
+```
+
+Notice that there is no joint test for the effect of tanner. There are a couple of significant z-values, so you would expect that the tanner variable has some effect (which, of course, you would probably expect even in the absence of data!). The formal test, however, must be obtained from the deviances:
+```{r}
+drop1(glm(menarche~age+tanner,binomial),test="Chisq")
+```
+Clearly, both terms are highly significant
+
+## Prediction
+
+The predict function works for generalized linear models, too. Let us first consider the hypertension example, where data were given in tabular form:
+```{r}
+predict(glm.hyp)
+```
+Recall that smoking was eliminated from the model, which is why the expected values come in identical pairs.
+
+These numbers are on the logit scale, which reveals the additive structure. Notice that $2.392 − 1.697 = 1.527 − 0.831 = 0.695$ (except for roundoff error), which is exactly the regression coefficient to obesity. Likewise, the regression coefficient to snoring is obtained by looking at the differences $2.392−1.527 = 1.697−0.831 = 0.866$.
+
+To get predicted values on the response scale (i.e., probabilities), use the ```type="response"``` argument to predict:
+```{r}
+predict(glm.hyp, type="response")
+```
+
+These may also be obtained using fitted, although you then cannot use the techniques for predicting on new data, etc.
+
+In the analysis of ```menarche```, the primary interest is probably in seeing a plot of the expected probabilities versus age. A crude plot could be obtained using something like:
+```{r}
+plot(age, fitted(glm(menarche~age,binomial)))
+```
+
+(it will look better if a different plotting symbol in a smaller size, using the ```pch``` and ```cex``` arguments, is used) but here is a more ambitious plan:
+```{r}
+glm.menarche <- glm(menarche~age, binomial)
+Age <- seq(8,20,.1)
+newages <- data.frame(age=Age)
+predicted.probability <- predict(glm.menarche,
+                                 newages,type="resp")
+plot(predicted.probability ~ Age, type="l")
+```
+Recall that ```seq``` generates equispaced vectors, here ages
+from 8 to 20 in steps of 0.1, so that connecting the points with lines will give a nearly smooth curve.
+
+## Model checking
+
+For tabular data it is obvious to try to compare observed and fitted proportions. In the hypertension example you get:
+```{r}
+fitted(glm.hyp)
+```
+
+The problem with this is that you get no feeling for how well the relative frequencies are determined. It can be better to look at observed and expected counts instead. The former can be computed as:
+```{r}
+fitted(glm.hyp)*n.tot
+```
+and to get a nice print for the comparison, you can use:
+```{r}
+data.frame(fit=fitted(glm.hyp)*n.tot,n.hyp,n.tot)
+```
+
+Notice that the discrepancy in cell 4 between 15% expected and 0% observed really is that there are 0 hypertensives out of 2 in a cell where the model yields an expectation of 0.3 hypertensives!
+
+For complex models with continuous background variables, it becomes more difficult to perform an adequate model check. It is especially a hindrance that nothing really corresponds to a residual plot when the observations have only two different values
+
+Consider the example of the probability of menarche as a function of age. The problem here is whether the relation can really be assumed linear on the logit scale. For this case, you might try subdividing the x-axis in a number of intervals and see how the counts in each interval fit with the
+expected probabilities. 
+```{r}
+age.group <- cut(age,c(8,10,12,13,14,15,16,18,20))
+tb <- table(age.group,menarche)
+tb
+```
+
+The technique used above probably requires some explanation. First, cut is used to define the factor ```age.group```, which describes a grouping into age intervals. Then a crosstable tb is formed from ```menarche``` and ```age.group```. Using ```prop.table```, the numbers are expressed relative to the row total, and column 2 of the resulting table is extracted. This contains the relative proportion in each age group of girls for whom ```menarche``` has occurred. Finally, a plot of expected probabilities is made, overlaid by the observed proportions.
+
+The plot looks reasonable on the whole, although the observed proportion among 12–13-year-olds appears a bit high and the proportion among 13–14-year-olds is a bit too low.
+
+But how do you evaluate whether the deviation is larger than what can be expected from the statistical variation? One thing to try is to extend the model with a factor that describes a division into intervals. It is not practical to use the full division of age.group because there are cells where either none or all of the girls have had their ```menarche```.
+
+We therefore try a division into four groups, with cutpoints at 12, 13, and 14 years, and add this factor to the model containing a linear age effect.
+```{r}
+age.gr <- cut(age,c(8,12,13,14,20))
+summary(glm(menarche~age+age.gr,binomial))
+```
+
+```{r}
+anova(glm(menarche~age+age.gr,binomial))
+```
+
+That is, the addition of the grouping actually does give a significantly better deviance. The effect is not highly significant, but since the deviation concerns the ages where “much happens”, you should probably be cautious about postulating a logit-linear age effect.
+
+Another possibility is to try a polynomial regression model. Here you need at least a third-degree polynomial to describe the apparent stagnation of the curve around 13 years of age. We do not look at this in great detail, but just show part of the output and a graphical presentation of the model.
+
+```{r}
+anova(glm(menarche~age+I(age^2)+I(age^3)+age.gr,binomial))
+```
+
+The warnings about fitted probabilities of 0 or 1 occur because the cubic term makes the logit tend much faster to $\pm \infty$ than the linear model did. There are two occurrences for the anova call because two of the models include the cubic term.
+
+The thing to note in the deviance table is that the cubic term gives a substantial improvement of the deviance, but once that is included, the age grouping gives no additional improvement. The plot should speak for itself.

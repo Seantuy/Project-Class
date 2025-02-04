@@ -1,0 +1,41 @@
+---
+title: "Data Analysis: HWA08 (Group Exercise)"
+author: 'LAST First'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+---
+
+### Data
+
+Start with the **iris** dataset. Since there is only one categorical variable and the Chi-square test requires two categorical variables, do the following:
+
+**Q1.** Add the variable size which corresponds to:
+
+(i) small if the length of the petal is smaller than the median of all flowers, 
+(ii) big otherwise (use the **ifelse** R-command)
+
+**Q2.** You should have now created a contingency table of the two variables Check species and size with the **table()** function:
+
+The contingency table gives the observed number of cases in each subgroup. For instance, there is only one big setosa flower, while there are 49 small setosa flowers in the dataset.
+
+**Q3.** Draw a barplot to visually represent the data:
+
+### Chi-square test of independence in R
+
+**Q4.** For this example, test in R if there is a relationship between the variables Species and size. 
+
+Everything you need appears in this output: the title of the test, what variables have been used, the test statistic, the degrees of freedom and the p-value of the test. 
+
+**Q5.** What do you get when you run **test$\$$statistic** and **test$\$$p.value** and **test$\$$expected** commands?
+
+If a warning such as “*Chi-squared approximation may be incorrect*” appears, it means that the **smallest expected frequencies are lower than 5**. To avoid this issue, you can either:
+
+* gather some levels (especially those with a small number of observations) to increase the number of observations in the subgroups, or
+
+* use the **Fisher’s exact test** (read below ...)
+
+**Fisher’s exact test** does not require the assumption of a minimum of 5 expected counts. It can be applied in R thanks to the function **fisher.test()**. This test is similar to the **Chi-square test** in terms of hypothesis and interpretation of the results. 
+
+

@@ -1,0 +1,97 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# Install required packages
+if (!requireNamespace("rayshader", quietly = TRUE)) install.packages("rayshader")
+if (!requireNamespace("raster", quietly = TRUE)) install.packages("raster")
+
+# Load libraries
+library(rayshader)
+library(raster)
+
+# Load the DEM file
+dem <- raster("H:/Downloads/rasters_SRTMGL5/output_SRTMGL1.tif")
+
+# Convert the DEM into a matrix
+dem_matrix <- matrix(raster::extract(dem, raster::extent(dem), buffer = 1000),
+                     nrow = ncol(dem), ncol = nrow(dem))
+
+# Create 3D plot
+dem_matrix %>%
+  height_shade() %>%
+  plot_3d(dem_matrix, zscale = 10, water = TRUE, waterdepth = 20,
+          wateralpha = 0.7, watercolor = "lightblue",
+          background = "white", solid = TRUE)
+
+
+# Different water levels
+water_levels <- c(10, 30, 50)
+for (water_depth in water_levels) {
+  dem_matrix %>%
+    height_shade() %>%
+    plot_3d(dem_matrix, zscale = 50, water = TRUE, waterdepth = water_depth,
+            wateralpha = 0.7, watercolor = "blue",
+            background = "lightblue", solid = TRUE)
+  
+  render_snapshot(paste0("render_waterdepth_", water_depth, ".png"))
+}
+
+# Save an interactive visualization
+render_movie("3D_representationss.mp4")
+```
+
+
+```{r}
+dem_matrix%>%
+  sphere_shade(texture = "imhof4") %>%
+  add_water(detect_water(dem_matrix), color = "imhof4") %>%
+  add_shadow(ray_shade(dem_matrix, zscale = 3), 0.5) %>%
+  add_shadow(ambient_shade(dem_matrix), 0) %>%
+  plot_3d(dem_matrix, zscale = 10, fov = 0, theta = 135, zoom = 0.75, phi = 45, windowsize = c(1000, 800))
+Sys.sleep(0.2)
+render_snapshot()
+```
+```{r}
+dem_matrix %>%
+  sphere_shade(texture = "desert") %>%
+  add_water(detect_water(dem_matrix), color = "lightblue") %>%
+  add_shadow(cloud_shade(dem_matrix,zscale = 10, start_altitude = 500, end_altitude = 700, 
+                         sun_altitude = 45, attenuation_coef = 2, offset_y = 300,
+              cloud_cover = 0.55, frequency = 0.01, scale_y=3, fractal_levels = 32), 0) %>%
+  plot_3d(dem_matrix, zscale = 10, fov = 0, theta = 135, zoom = 0.75, phi = 45, windowsize = c(1000, 800),
+          background="blue")
+render_camera(theta = 125, phi=22,zoom= 0.47, fov= 60 )
+
+render_clouds(dem_matrix, zscale = 10, start_altitude = 500, end_altitude = 700, 
+              sun_altitude = 45, attenuation_coef = 2, offset_y = 300,
+              cloud_cover = 0.55, frequency = 0.01, scale_y=3, fractal_levels = 32, clear_clouds = T)
+render_snapshot(clear=TRUE)
+```
+```{r}
+dem_matrix %>%
+  sphere_shade(texture = "desert") %>%
+  add_water(detect_water(dem_matrix), color = "desert") %>%
+  add_shadow(ray_shade(dem_matrix, zscale = 3), 0.5) %>%
+  add_shadow(ambient_shade(dem_matrix), 0) %>%
+  plot_3d(dem_matrix, zscale = 10, fov = 30, theta = -225, phi = 25, windowsize = c(1000, 800), zoom = 0.3)
+Sys.sleep(0.2)
+render_depth(focallength = 800, clear = TRUE)
+```
+```{r}
+
+```
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

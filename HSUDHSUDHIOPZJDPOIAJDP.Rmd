@@ -1,0 +1,60 @@
+---
+title: "Untitled"
+author: "Sean"
+date: "2024-12-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r}
+install.packages("kableExtra")
+```
+
+```{r}
+# Load necessary libraries
+library(knitr)
+library(kableExtra)
+
+# Create a data frame for the table
+survival_data <- data.frame(
+  Variable = c("inst", "time", "status", "age", "sex", 
+               "ph.ecog", "ph.karno", "pat.karno", "meal.cal", "wt.loss"),
+  Description = c(
+    "Institution code",
+    "Survival time in days",
+    "Censoring status 1=censored, 2=dead",
+    "Age in years",
+    "Male=1 Female=2",
+    "ECOG performance score as rated by the physician. \n0=asymptomatic, 1=symptomatic but completely ambulatory, 2=in bed <50% of the day, 3=in bed >50% of the day but not bedbound, 4=bedbound",
+    "Karnofsky performance score (bad=0, good=100) rated by physician",
+    "Karnofsky performance score as rated by patient",
+    "Calories consumed at meals",
+    "Weight loss in last six months (pounds)"
+  )
+)
+
+# Display the table using kableExtra for styling
+kable(survival_data, caption = "Description of Variables in the Survival Dataset") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"), position = "left") %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(1, bold = TRUE, color = "black") %>%
+  column_spec(2, width = "30em")
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

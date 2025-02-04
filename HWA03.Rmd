@@ -1,0 +1,229 @@
+---
+title: 'Data Analysis: HWA03 – Group Exercise Sheet: 3'
+author: 'Name: LAST First'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+
+**General HWAs instructions:**
+
+1. Load your packages and modify your paths and define your chucks as we have seen in previous examples and HWAs (according to your needs).
+
+2. Read **carefully** all the text and answer the questions.
+
+3. Provide a short phrases to accompany your answers. For example: "**\textcolor{blue}{The mean value of the male subjects age is 13.4 years}**" instead of simply "**13.4**" (just the output value).
+
+4. Use **\textcolor{blue}{bold color}** text for your answers. In this way, I can inspect faster and locate immediately **\textcolor{blue}{your reply}**.
+
+5. Always keep the questions or problems statements in the template.
+
+6. **CHECK your PDF files** for missing answers and chopped text at the boarders of the chunks (hit enter and use extra lines if this occurs).
+
+7. If you are unable to give an answer, write down -> "**No answer**" after the respective question in  **\textcolor{red}{bold red}**.
+
+
+
+## Dataframes
+
+### Assignment Goals
+
+* Create dataframes.
+* Index dataframes with $, [,], and subset()
+* Change column names with $ and <-
+
+### Examples
+```{r echo=T, eval=F}
+# Create a dataframe called study
+
+study <- data.frame(id = c(1:8),
+                    sex = c("m", "f", "m", "m", "m", "f", "m", "x34"),
+                    age = c(28, 24, 19, 23, 42, 32, 27, 24),
+                    eyecolor = c("blue", "brown", "brown", "green", "blue", "brown", "blue", "green"),
+                    group = c(1, 1, 1, 1, 2, 2, 2, 2),
+                    score = c(78, 65, 94, 92, 84, 86, 92, 86),
+                    stringsAsFactors = FALSE)
+
+# Summary statistics from specific columns
+
+mean(study$age)         # Mean age
+table(study$sex)        # Counts of each sex
+mean(study$sex == "m")  # Percent that are men
+mean(study$eyecolor %in% c("blue", "brown")) # Percent of eye colors that are blue or brown
+
+# Indexing
+
+study[1:5,]                           # First 5 rows
+study[6:10, c("id", "sex", "score")]  # Rows 6-10 and columns id, sex and score
+
+# Subsetting
+
+study_men <- subset(study, sex == "m")
+study_g1 <- subset(study, group == 1)
+study_g2 <- subset(study, group == 2)
+
+# Different ways to do the same subsetting
+
+# Q: What is the mean score of group 2?
+
+study_g2 <- subset(study, group == 2)   # Method 1A: Create study_g2 dataframe
+mean(study_g2$score)                    #        1B: Calculate mean of study_g2$score
+
+mean(subset(study, group == 2)$score)        # Method 2: Same as method 1 but in one step
+with(subset(study, group == 2), mean(score)) # Method 3: Using with() and subset() 
+mean(study$score[study$group == 2])          # Method 4: Using []
+
+# Q: What percent of women over the age of 20 had brown eyes?
+
+study.women <- subset(study, sex == "f" & age > 20)           #  Method 1A: 
+mean(study.women$eyecolor == "brown")                         #         1B: 
+
+mean(subset(study, sex == "f" & age > 20)$eyecolor == "brown")         # Method 2: 
+with(subset(study, sex == "f" & age > 20), mean(eyecolor == "brown"))  # Method 3: 
+mean(study$eyecolor[study$sex == "f" & study$age > 20] == "brown")     # Method 4: 
+
+# Changing values of a vector in a dataframe
+
+# Change sex values that are NOT f or m to NA
+study$sex[study$sex %in% c("f", "m") == FALSE] <- NA
+
+# Change "f" to "female", and "m" to "male"
+study$sex[study$sex == "f"] <- "female"
+study$sex[study$sex == "m"] <- "male"
+
+# Changing column names
+
+# Change name of first column to participant.id
+names(study)[1] <- "patient.id"
+
+# Change the name of columns 2 through 4
+names(study)[2:4] <- c("gender", "age_years", "eye")
+
+# Change name of group column to condition
+names(study)[names(study) == "group"] <- "condition"
+```
+
+
+### A Priming study
+
+In a provocative paper, Bargh, Chen and Burrows (1996) sought to test whether or not priming people with trait concepts would trigger trait-consistent behavior. In one study, they primed participants with either neutral words (e.g.; bat, cookie, pen), or with words related to an elderly stereotype (e.g.; wise, stubborn, old). They then, unbeknownst to the participants, used a stopwatch to record how long it took the participants to walk down a hallway at the conclusion of an experiment. They predicted that participants primed with words related to the elderly would walk slower than those primed with neutral words.
+
+In this HWA, you will analyze fake data corresponding to this study.
+
+### Dataset description
+
+Our fake study has data from the following measures (load the data and figure from your respective directory $-->$ create a new project in RStudio):
+
+![Caption for the picture.](./pic1.png)
+
+
+### Load the data
+
+**1.** The text file containing the data is called **priming.txt**. You can download the data and load them from your project directory into R as a new dataframe called priming by running the following (**make changes according to your paths and OS**):
+
+```{r}
+priming <- read.table(file = "./priming.txt",
+                      stringsAsFactors = FALSE)
+```
+
+Here is how the data should look:
+```{r}
+head(priming)
+```
+
+### Understand and clean the data
+
+**2.** Get to know the data using View(), summary(), head() and str().
+
+**3.** Look at the names of the dataframe with names(). Those aren’t very informative are they? Change the names to the correct values (make sure to use the naming scheme I describe in the dataset description).
+
+
+**Apply functions to columns**:
+
+**4.** What was the mean participant age? Answer this in two ways. First, calculate the mean directly from the age column. Second, create a new vector object called age.v that contains the age data, then calculate the mean age from this vector. Do you get the same result?
+
+**5.** What was the median walking time?
+
+**6.** How many females were there? How many males?
+
+**7.** What percent of participants passed the attention check? (Hint: To calculate a percentage from a 0, 1 variable, use mean())
+
+**8.** Walking time is currently in seconds. Add a new column to the dataframe called walk_m that shows the walking time in minutes rather than seconds.
+
+**Index and subset**:
+
+**9.** What were the sexes of the first 10 participants?
+
+**10.** What was the data for the 50th participant?
+
+Try answering these questions using one of the methods in the Examples above. The easiest method is Method 1. That is, first create a new dataframe object of the subsetted data, and then calculate the summary data from this new object.
+
+**11.** What was the mean walking time for the elderly prime condition?
+
+**12.** What was the mean walking time for the neutral prime condition?
+
+**13.** What was the mean walking time for participants less than 23 years old?
+
+**14.** What was the mean walking time for females with a close relationship with their grandparents?
+
+**15.** What was the mean walking time for males over 21 years old without a close relationship with their grandparents?
+
+
+**Create new dataframe objects**
+
+**16.** One of your colleagues wants the study data, but only the columns id, prime, and walk. Create a new dataframe called priming_simple that only contains these columns.
+
+**17.** Some of the data don’t make any sense. For example, some walking times are negative, some prime values aren’t correct, and some prime.duration values weren’t part of the original study plan. Create a new dataframe called priming_c (aka., priming clean) that only includes rows with valid values for each column – do this by looking for an few strange values in each column, and by looking at the original dataset description. Additionally, only include participants who passed the attention check. Here’s a skeleton of how your code should look
+
+```{r, echo=T, eval=F}
+# Create priming_c, a subset of the original priming data
+#  (replace __ with the appropriate values)
+priming_c <- subset(priming,
+                    subset = sex %in% c(___) & 
+                             age > ___ &
+                             attention == ___ &
+                             prime %in% c(___) &
+                             prime.duration %in% c(___) &
+                             grandparents %in% c(___) &
+                             walk > ___ )
+```
+
+
+**18.** How many participants gave valid data and passed the attention check? (Hint: Use the result from your previous answer!)
+
+**19.** Of those participants who gave valid data and passed the attention check, what was the mean walking time of those given the elderly and neutral prime (calculate these separately).
+
+**Challenges**
+
+**20.** Run the following lines of code and look at the resulting objects. Are they the same or different? You can do this by printing them and visually exploring the results. Or, you can use the R function identical() (look at the help function with ?identical to see how it works)
+
+```{r, echo=T, eval=F}
+v1 <- priming$walk
+v2 <- priming["walk"]
+v3 <- priming[,names(priming) == "walk"]
+```
+
+**21.** Run the following lines of code and look at the resulting objects. Are they the same or different? If they are different, why?
+
+```{r, echo=T, eval=F}
+vA <- priming$walk
+vB <- subset(priming, select = "walk")
+```
+
+**22.** Based on what you’ve learned in the previous question, run the following code and see what happens. Can you explain why?
+
+```{r, echo=T, eval=F}
+mean(vA)
+mean(vB)
+```
+
+**Note**: The following questions apply to your cleaned dataframe (priming_c)
+
+**23.** Did the effect of priming condition on walking times differ between the first 50 and the last 50 participants. That is, what was the difference in the mean walking time between the two priming conditions for the first 50 participants? What about the last 50 participants? (Hint: Make sure to index the data using id!)?s
+
+**24.** Do you find evidence that a participant’s relationship with their grandparents affects how they responded to the primes?
+
+**25.** Due to a computer error, the data from every participant with an even id number is invalid. Remove these data from your priming_c dataframe.

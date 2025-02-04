@@ -1,0 +1,332 @@
+---
+title: "ANOVA Exercise Sheet a (solutions)"
+author: 'MANOS Thanos'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+  word_document: default
+---
+
+# One-Way ANOVA
+
+How one-way ANOVA test works?
+
+* Assume that we have 3 groups (A, B, C) to compare:
+* Compute the common variance, which is called variance within samples.
+
+* Compute the variance between sample means as follow:
+(i) Compute the mean of each group
+
+(ii) Compute the variance between sample means 
+
+* Produce F-statistic as the ratio. Note that, a lower ratio (ratio < 1) indicates that there are no significant difference between the means of the samples being compared. However, a higher ratio implies that the variation among group means are significant. 
+
+## Visualize your data and compute one-way ANOVA in R
+
+Here, we’ll use the built-in R data set named **PlantGrowth**. It contains the weight of plants obtained under a control and two different treatment conditions.
+
+```{r, echo=T, eval=T}
+my_data <- PlantGrowth
+```
+
+* Check your data
+
+To have an idea of what the data look like, we use the the function **sample_n()** [in dplyr package]. The sample_n() function randomly picks a few of the observations in the data frame to print out:
+
+```{r, echo=T, eval=T}
+# Show a random sample
+set.seed(1234)
+dplyr::sample_n(my_data, 10)
+```
+
+**NOTE:** In R terminology, the column “group” is called factor and the different categories (“ctr”, “trt1”, “trt2”) are named factor levels. The levels are ordered alphabetically.
+
+```{r, echo=T, eval=T}
+# Show the levels
+levels(my_data$group)
+```
+
+If the levels are not automatically in the correct order, re-order them as follow:
+
+```{r, echo=T, eval=T}
+my_data$group <- ordered(my_data$group,
+                         levels = c("ctrl", "trt1", "trt2"))
+```
+
+It’s possible to compute summary statistics (mean and sd) by groups using the **dplyr** package.
+
+```{r, echo=T, eval=T}
+library(dplyr)
+group_by(my_data, group) %>%
+  summarise(
+    count = n(),
+    mean = mean(weight, na.rm = TRUE),
+    sd = sd(weight, na.rm = TRUE)
+  )
+```
+
+* Visualize your data
+
+To use R base graphs read this: R base graphs. Here, we’ll use the **ggpubr** R package for an easy ggplot2-based data visualization.
+
+Install the latest version of ggpubr:
+
+```{r, echo=T, eval=T}
+# Install
+#install.packages("ggpubr")
+```
+
+Visualize your data with ggpubr:
+
+```{r, echo=T, eval=T}
+# Box plots
+# ++++++++++++++++++++
+# Plot weight by group and color by group
+library("ggpubr")
+ggboxplot(my_data, x = "group", y = "weight", 
+          color = "group", palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+          order = c("ctrl", "trt1", "trt2"),
+          ylab = "Weight", xlab = "Treatment")
+```
+
+```{r, echo=T, eval=T}
+# Mean plots
+# ++++++++++++++++++++
+# Plot weight by group
+# Add error bars: mean_se
+# (other values include: mean_sd, mean_ci, median_iqr, ....)
+library("ggpubr")
+ggline(my_data, x = "group", y = "weight", 
+       add = c("mean_se", "jitter"), 
+       order = c("ctrl", "trt1", "trt2"),
+       ylab = "Weight", xlab = "Treatment")
+```
+
+If you still want to use R base graphs, type the following scripts:
+
+```{r, echo=T, eval=T}
+#install.packages("gplots")
+```
+
+```{r, echo=T, eval=T}
+# Box plot
+boxplot(weight ~ group, data = my_data,
+        xlab = "Treatment", ylab = "Weight",
+        frame = FALSE, col = c("#00AFBB", "#E7B800", "#FC4E07"))
+# plotmeans
+library("gplots")
+plotmeans(weight ~ group, data = my_data, frame = FALSE,
+          xlab = "Treatment", ylab = "Weight",
+          main="Mean Plot with 95% CI") 
+```
+
+* Compute one-way ANOVA test
+
+We want to know if there is any significant difference between the average weights of plants in the 3 experimental conditions.
+
+The R function aov() can be used to answer to this question. The function summary.aov() is used to summarize the analysis of variance model.
+
+```{r, echo=T, eval=T}
+# Compute the analysis of variance
+res.aov <- aov(weight ~ group, data = my_data)
+# Summary of the analysis
+summary(res.aov)
+```
+
+The output includes the columns $F$ value and $Pr(>F)$ corresponding to the p-value of the test.
+
+* Interpret the result of one-way ANOVA tests
+
+As the p-value is less than the significance level 0.05, we can conclude that there are significant differences between the groups highlighted with “*" in the model summary.
+Multiple pairwise-comparison between the means of groups
+
+In one-way ANOVA test, a significant p-value indicates that some of the group means are different, but we don’t know which pairs of groups are different.
+
+It’s possible to perform multiple pairwise-comparison, to determine if the mean difference between specific pairs of group are statistically significant.
+Tukey multiple pairwise-comparisons
+
+As the ANOVA test is significant, we can compute Tukey HSD (Tukey Honest Significant Differences, R function: *+TukeyHSD()**) for performing multiple pairwise-comparison between the means of groups.
+
+The function **TukeyHD()** takes the fitted ANOVA as an argument.
+
+```{r, echo=T, eval=T}
+TukeyHSD(res.aov)
+```
+
+(i) **diff**: difference between means of the two groups 
+
+(ii) **lwr, upr**: the lower and the upper end point of the confidence interval at 95% (default)
+
+(iii) **p adj**: p-value after adjustment for the multiple comparisons.
+
+It can be seen from the output, that only the difference between trt2 and trt1 is significant with an adjusted p-value of 0.012.
+
+* Pairewise t-test
+
+The function pairewise.t.test() can be also used to calculate pairwise comparisons between group levels with corrections for multiple testing.
+
+```{r, echo=T, eval=T}
+pairwise.t.test(my_data$weight, my_data$group,
+                 p.adjust.method = "BH")
+```
+
+The result is a table of p-values for the pairwise comparisons. Here, the p-values have been adjusted by the Benjamini-Hochberg method.
+
+
+* Check ANOVA assumptions: test validity?
+
+The ANOVA test assumes that, the data are normally distributed and the variance across groups are homogeneous. We can check that with some diagnostic plots.
+Check the homogeneity of variance assumption
+
+The residuals versus fits plot can be used to check the homogeneity of variances.
+
+In the plot below, there is no evident relationships between residuals and fitted values (the mean of each groups), which is good. So, we can assume the homogeneity of variances.
+
+```{r, echo=T, eval=T}
+# 1. Homogeneity of variances
+plot(res.aov, 1)
+```
+
+(i) Points 17, 15, 4 are detected as outliers, which can severely affect normality and homogeneity of variance. It can be useful to remove outliers to meet the test assumptions.
+
+(ii) It’s also possible to use Bartlett’s test or Levene’s test to check the homogeneity of variances.
+
+We recommend **Levene’s test**, which is less sensitive to departures from normal distribution. The function leveneTest() [in car package] will be used:
+
+
+```{r, echo=T, eval=T}
+#install.packages("car")
+library(car)
+leveneTest(weight ~ group, data = my_data)
+```
+
+From the output above we can see that the p-value is not less than the significance level of 0.05. This means that there is no evidence to suggest that the variance across groups is statistically significantly different. Therefore, we can assume the homogeneity of variances in the different treatment groups.
+
+* Relaxing the homogeneity of variance assumption
+
+The classical one-way ANOVA test requires an assumption of equal variances for all groups. In our example, the homogeneity of variance assumption turned out to be fine: the Levene test is not significant.
+
+How do we save our ANOVA test, in a situation where the homogeneity of variance assumption is violated?
+
+An alternative procedure (i.e.: Welch one-way test), that does not require that assumption have been implemented in the function oneway.test().
+
+a. **ANOVA test with no assumption of equal variances**
+
+```{r, echo=T, eval=T}
+oneway.test(weight ~ group, data = my_data)
+```
+
+b. **Pairwise t-tests with no assumption of equal variances**
+
+```{r, echo=T, eval=T}
+pairwise.t.test(my_data$weight, my_data$group,
+                 p.adjust.method = "BH", pool.sd = FALSE)
+```
+
+* Check the normality assumption
+
+Normality plot of residuals. In the plot below, the quantiles of the residuals are plotted against the quantiles of the normal distribution. A 45-degree reference line is also plotted.
+
+The normal probability plot of residuals is used to check the assumption that the residuals are normally distributed. It should approximately follow a straight line.
+
+```{r, echo=T, eval=T}
+# 2. Normality
+plot(res.aov, 2)
+```
+
+As all the points fall approximately along this reference line, we can assume normality.
+
+The conclusion above, is supported by the Shapiro-Wilk test on the ANOVA residuals (W = 0.96, p = 0.6) which finds no indication that normality is violated.
+
+```{r, echo=T, eval=T}
+# Extract the residuals
+aov_residuals <- residuals(object = res.aov )
+# Run Shapiro-Wilk test
+shapiro.test(x = aov_residuals )
+```
+
+* Non-parametric alternative to one-way ANOVA test
+
+Note that, a non-parametric alternative to one-way ANOVA is Kruskal-Wallis rank sum test, which can be used when ANNOVA assumptions are not met.
+
+```{r, echo=T, eval=T}
+kruskal.test(weight ~ group, data = my_data)
+```
+# Two-Way ANOVA
+The one-way analysis of variance is a useful technique to 
+verify if the means of more groups are equals. But this analysis may not be very useful for more complex problems. For example, it may be necessary to take into account two factors of variability to determine if the averages between the groups depend on the group classification ( “zone”) or the second variable that is to consider (“block”). In this case should be used the two-way analysis of variance (two-way ANOVA).
+
+
+We begin immediately with an example so as to facilitate the understanding of this statistical method. The data collected are organized into double entry tables.
+
+The director of a company has collected revenue (thousand dollars) for 5 years and under per month. You want to see if the revenue depends on the year and/or month, or if they are independent of these two factors.
+
+Conceptually, the problem may be solved by an horizontal ANOVA and a vertical ANOVA, in order to verify if the average revenues per year are the same, and if they are equal to the average revenue computed by month. This would require many calculations, and so we prefer to use the two-way ANOVA, which provides the result instantly.
+
+This is the table of revenue classified by year and month:
+
+Months 		| Y1 | Y2 | Y3 | Y4 | Y5
+
+January 	|  5 | 18 | 22 | 23 | 24
+
+February 	| 22 | 25 | 15 | 15 | 14
+
+March 		| 18 | 22 | 15 | 19 | 21
+
+April 		| 23 | 15 | 14 | 17 | 18
+
+May 		| 23 | 15 | 26 | 18 | 14
+
+June 		| 12 | 15 | 11 | 10 | 8
+
+July 		| 26 | 12 | 23 | 15 | 18
+
+August 		| 19 | 17 | 15 | 20 | 10
+
+September 	| 15 | 14 | 18 | 19 | 20
+
+October 	| 14 | 18 | 10 | 12 | 23
+
+November 	| 14 | 22 | 19 | 17 | 11
+
+December 	| 21 | 23 | 11 | 18 | 14 
+
+As with the one-way ANOVA, even here the aim is to structure a Fisher’s F-test to assess the significance of the variable “month” and of the variable “year”, determine if the revenues are dependent on one (or both) the criteria for classification.
+
+How to perform the two-way ANOVA in R? First creates an array containing all the values tabulated, transcribed by rows:
+
+```{r, echo=T, eval=T}
+revenue = c(15,18,22,23,24, 22,25,15,15,14, 18,22,15,19,21,
+            23,15,14,17,18, 23,15,26,18,14, 12,15,11,10,8,
+            26,12,23,15,18, 19,17,15,20,10, 15,14,18,19,20,
+            14,18,10,12,23, 14,22,19,17,11, 21,23,11,18,14)
+```
+
+According to the months, you create a factor of **12 levels (the number of rows)** with **5 repetitions (the number columns)** in this manner:
+
+```{r, echo=T, eval=T}
+months = gl(12,5)
+```
+
+According to the years you create a factor with 5 levels (the number of column) and 1 recurrence, declaring the total number of observations (the length of the vector revenue):
+
+```{r, echo=T, eval=T}
+years = gl(5, 1, length(revenue))
+```
+  
+Now you can fit the linear model and produce the ANOVA table:
+
+```{r, echo=T, eval=T}
+fit = aov(revenue ~ months + years)
+```
+  
+```{r, echo=T, eval=T}
+anova(fit)
+```
+
+Now interpret the results.
+
+The significance of the difference between months is: $F = 1.4998$. This value is lower than the value tabulated and indeed $p-$value > 0.05. So we cannot reject the null hypothesis: the means of revenue evaluated according to the months are not proven to be not equal, hence we remain in our belief that the variable “months” has no effect on revenue.
+
+The significance of the difference between years is: $F = 0.5906$. This value is lower than the value tabulated and indeed $p-$value > 0.05. So we fail to reject the null hypothesis: the means of revenue evaluated according to the years are not found to be un-equal, then the variable “years” has no effect on revenue.

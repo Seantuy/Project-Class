@@ -1,0 +1,394 @@
+---
+title: "Lung Cancer Survival Analysis"
+author: "Daniel Mon, Nhi Nguyen, Ethan Gandiboyina, Sean Paulo"
+date: "2024-12-14"
+output: 
+  html_document:
+    latex_engine: xelatex
+
+---
+* In this R markdown we will explain survival analysis in the context of the lung cancer dataset which is included in the survival package in R.*
+
+Survival analysis is a statistical method used to model and analyze the time until an event of interest occurs on a given subject. Commonly applied in medical research, it was initially developed to evaluate the efficacy of drugs and treatments. In this context, the "event" often refers to patient outcomes such as death or recovery over a specified observation period.Hence, the name “Survival Analysis”.
+
+In this report we will...
+
+  Use the Kaplin Meier to:
+    - estimate and plot survival functions
+    - extract survival data
+    - compare survival curves for both sexes and weight loss patients
+  Use cox model to:
+    - determine the log hazard of variables
+    - form regression models to predict survivability of a patient.
+  
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE, fig.height = 6, fig.width = 8)
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+if (!require("survival")) install.packages("survival")
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("ggsurvfit")) install.packages("ggsurvfit")
+if (!require("gtsummary")) install.packages("gtsummary")
+if (!require("tibble")) install.packages("tibble")
+if (!require("lubridate")) install.packages("lubridate")
+```
+
+### **1. Methods & Tools**
+#### **1.1 Dataset Description**
+The lung data set contains data on 228 patients, including survival time, censoring status, and several clinical and demographic variables such as age, sex, ECOG performance score, and weight loss.
+
+#### **1.2 Installation and Loading Libraries**
+```{r install-packages}
+# Install required packages
+#install.packages("survival")
+#install.packages("ggplot2")
+#install.packages("dplyr")
+#install.packages("gtsummary")
+#install.packages("ggsurvfit")
+#install.packages("tibble")
+#install.packages("lubridate")
+#install.packages("devtools")
+
+#devtools::install_github("zabore/condsurv")
+#devtools::install_github("zabore/ezfun")
+```
+
+```{r load-libraries}
+# Load libraries
+library(survival)
+library(ggplot2)
+library(dplyr)
+library(ggsurvfit)
+library(survminer)
+library(gtsummary)
+library(tibble)
+library(lubridate)
+library(devtools)
+library(condsurv)
+library(ezfun)
+
+# Set contrast palette for plots
+ezfun::set_ccf_palette("contrast")
+```
+
+```{r}
+rm(lung)
+```
+
+
+#### **1.3 Data Preprocessing**
+```{r load-data}
+# Load the lung cancer dataset
+lung_cancer_df <- lung
+
+# Recode the `status` variable: 1 = censored, 2 = dead
+lung_cancer_df <- lung_cancer_df %>% mutate(
+    status = recode(status, `1` = 0, `2` = 1)
+)
+
+# Preview the dataset
+head(lung_cancer_df)
+```
+
+### **2. Results/Findings**
+
+#### **2.1 Kaplan-Meier Survival Analysis**
+One of the most basic forms of Survival analysis is plotting the survivors over a given time on a graph. The formula to do so is given by: $S(t) = P(T > t)$. This is calculated for each point in time. When performing this plotting using real world data we are often presented with the issue of censoring. Due to missing data we cannot accurately calculate the survival curve. As a result, we must approximate the Survival curve using the Kaplan Meier Estimate. This is given by using the formula:
+$$S(t) = \prod_{i: t_i \leq t} \left( 1 - \frac{d_i}{n_i} \right)$$
+
+
+
+Using the Kaplan Meier estimate we can plot a survival curve for the lung cancer dataset.
+
+```{r kaplan-meier-curve}
+# Kaplan-Meier curve
+survfit2(Surv(time, status) ~ 1, data = lung_cancer_df) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Overall Survival Probability"
+  ) + 
+  add_confidence_interval() +
+  add_risktable()
+```
+
+Using The Kaplan Meier Curve plotted above we can determine the proportion of people who survived until a given time (t).
+
+**Findings:**
+- **1-Year Survival Probability**: **38% (95% CI: 30% - 46%)**.
+- The survival probability drops significantly within the first 6 months, reflecting the aggressive nature of lung cancer in this cohort.
+-Given a t of 365 days (1 year). We find that 41% of those diagnosed with lung cancer survive at least 1 year. Without taking censoring (Naive estimate) into account, the probability of survival over 1 year would be 49%.
+
+#### **2.2 Kaplan-Meier Survival by Sex**
+Additionally, we can use produce several Kaplan-Meier curves to plot the survival curves of different groups. The Kaplan-Meier survival curve below is stratified by sex to explore differences in survival probabilities between the Male and Female.
+
+```{r survival-by-sex}
+# Kaplan-Meier curve stratified by sex
+survfit(Surv(time, status) ~ sex, data = lung_cancer_df) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Survival Probability",
+    title = "Survival by Sex"
+  ) +
+  add_confidence_interval() +
+  add_risktable()
+```
+
+**Findings:**
+- **Males:** Median survival is approximately **270 days**.
+- **Females:** Median survival is approximately **426 days**.
+- Females demonstrate a significantly higher survival probability compared to males.
+
+#### **2.3 Median Survival**
+```{r median-survival}
+# Median survival time
+lung_cancer_df %>% 
+  filter(status == 1) %>% 
+  summarize(median_surv = median(time))
+```
+- **Median Survival:** The overall median survival time is **310 days**.
+
+```{r median-survival-by-sex}
+# Median survival by sex
+lung_cancer_df %>% 
+  group_by(sex) %>% 
+  summarize(median_surv = median(time))
+```
+- **Median Survival by Sex:**
+  - Males: **270 days**.
+  - Females: **426 days**.
+
+#### **2.4 Survival by ECOG Performance Score**
+The survival function can also be plotted for other factored variables, for instance the ph.ecog variable. The *ph.ecog** variable represents the ECOG score of a patient, this measures a patients physical capabilities. The ECOG value ranges between 0 and 4 where 0=fully active, and 4=confined to a bed.
+```{r survival-by-ecog}
+# Kaplan-Meier curve stratified by ECOG score
+survfit(Surv(time, status) ~ ph.ecog, data = lung_cancer_df) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Survival Probability",
+    title = "Survival by ECOG Performance Score"
+  ) +
+  add_confidence_interval() +
+  add_risktable()
+```
+
+
+
+
+**Findings:**
+- **ECOG = 0 (asymptomatic):** Median survival **480 days**.
+- **ECOG = 3 (in bed > 50% of the day):** Median survival **<100 days**.
+- The differences are statistically significant (**p < 0.001**).
+
+#### **2.5 Survival by Weight Loss**
+Similarly, we can see how patients' weight loss can influence survival.
+```{r survival-by-weight-loss}
+# Create weight loss group
+lung_cancer_df <- lung_cancer_df %>% 
+  mutate(weight_loss_group = if_else(wt.loss > 10, "High Loss", "Low Loss"))
+
+# Kaplan-Meier curve stratified by weight loss
+survfit(Surv(time, status) ~ weight_loss_group, data = lung_cancer_df) %>% 
+  ggsurvfit() +
+  labs(
+    x = "Days",
+    y = "Survival Probability",
+    title = "Survival by Weight Loss"
+  ) +
+  add_risktable()
+```
+
+
+
+
+
+
+**Findings:**
+- **High Weight Loss (>10 lbs):** Median survival **220 days**.
+- **Low Weight Loss (≤10 lbs):** Median survival **340 days**.
+
+#### **2.6 Cox Proportional Hazards Model**
+The cox regression model is a semi-parametric model(we don't assume a distribution for $h_0(t)$) used to fit uni-variable or multivariable regression models to survival outcomes. This allows us to view how specific factors influence event rate at a given time (Hazard rate). The Cox model is given by using the hazard function: 
+$$ h(t | X) = h_0(t) \exp(\beta_1 X_1 + \beta_2 X_2 + \dots + \beta_p X_p) $$ 
+h(t| X)= Hazard at time t for a given variable
+$h_0(t)$= baseline hazard function
+exp(...) exponential linear combination of variables. 
+Using the cox model we are able to determine the significance of each variable in determining their hazard ratio(hazard ratio describes the likelihood a variable has on the event), and produce a model to predict hazard of a patient.
+
+
+```{r cox-model}
+# Cox proportional hazards model
+cox_model <- coxph(Surv(time, status) ~ ., data = lung_cancer_df)
+cox_model %>% tbl_regression(exp = TRUE)
+```
+Findings:**
+- **Sex (Male vs. Female):** HR **1.51 (95% CI: 1.12 - 2.04)**. Males have a 51% higher risk of death.
+- **ECOG Score:** Poorer functional status correlates with a higher risk of death.
+- **Weight Loss:** Each additional pound of weight loss increases risk by 7% (**HR: 1.07**).
+
+In the table above we can determine that variables: inst,sex,ph.ecog, and ph.karno are significant in predicting survival time. So we can remake the model using those variables only.
+
+```{r cox model summary}
+cox_model <- coxph(Surv(time, status) ~ inst + sex + ph.ecog + ph.karno, data = lung_cancer_df)
+
+#cox_model %>% tbl_regression(exp = TRUE)
+summary_df<-summary(cox_model)
+summary(cox_model)
+```
+
+
+The summary of the model gives the coefficients to describe the hazard function of the lung cancer patients depending on their inst,sex,ph.ecog, and ph.karno . Using these values we can model survival functions for different combinations of variables. Plotting functions for each variable would be very messy so we can make a cox model plotting hazard of 2 institutions and gender.
+
+
+
+
+```{r survival using cox model}
+
+# Randomly select two institutions
+set.seed(22)  
+selected_institutions <- c(11,21)
+
+# Fit the Cox model
+cox_model <- coxph(Surv(time, status) ~ inst + sex, data = lung)
+
+# Create new data for the selected institutions and both genders
+new_data <- expand.grid(
+  inst = selected_institutions,
+  sex = c(1, 2)  # 1 = Male, 2 = Female
+)
+
+# Generate survival curves using survfit
+surv_fit <- survfit(cox_model, newdata = new_data)
+
+# Plot the survival curves with ggsurvplot
+ggsurvplot(
+  surv_fit,
+  data = lung,
+  risk.table = TRUE,                
+  pval = TRUE,                      
+  conf.int = TRUE,                  
+  ggtheme = theme_minimal(),     
+  xlab = "Time (days)",            
+  ylab = "Survival Probability",    
+  legend.title = "Covariates",     
+  legend.labs = paste0("Inst = ", rep(selected_institutions, each = 2),
+                       ", Sex = ", rep(c("Male", "Female"), times = 2)) # Custom legend
+)
+
+
+```
+Here we can see that for both genders, institution 13 has an overall higher probability. 
+
+```{r}
+# Subset data for the selected institutions
+lung_subset <- lung_cancer_df[lung_cancer_df$inst %in% c(11,21), ]
+
+# Perform the log-rank test
+log_rank_test <- survdiff(Surv(time, status) ~ inst, data = lung_subset)
+
+# View the results
+log_rank_test
+
+```
+N is the # of participants in the selected institutions. Observed= # of deaths, Expected= # of expected deaths assuming that the null hypothesis is True ($N_0$=There is no difference in survival between different institutions). Chisq= Measures the difference between the observed and expected values of an institution.  The higher the value the greater the difference between them. 
+
+Given the results of this log rank test we cannot deny the null hypothesis given the high p value. Although the cox model says the inst attribute is significant, the difference between the 2 selected institutions above is not provide enough information to disprove the null hypothesis.
+
+
+#### **2.7 Stratified Survival Probabilities**
+```{r stratified-survival}
+# Summary of survival probabilities
+summary(survfit(Surv(time, status) ~ sex, data = lung_cancer_df), times = c(180, 365))
+```
+1. **Sex:**
+   - Male 6-month survival: **52%**.
+   - Female 6-month survival: **70%**.
+2. **ECOG Score:**
+   - ECOG = 0: 1-year survival **60%**.
+   - ECOG = 3: 1-year survival **5%**.
+
+
+### **3. Conceptual 7 Answer ** 
+
+## Mean and Variance of \( q_{1k} \)
+
+### Hypergeometric Distribution Assumptions
+
+Assume there is no difference in the survival functions between the two groups. The total number of failures at time \( t_k \) is denoted as \( q_k \), and we are drawing \( r_{1k} \) observations from a risk set of size \( r_k \). The number of failures in the first group, \( q_{1k} \), follows a hypergeometric distribution because:
+
+- The total population size is \( r_k \) (risk set size).
+- The number of successes (failures at \( t_k \)) is \( q_k \).
+- The number of draws (observations from the risk set) is \( r_{1k} \).
+
+Thus, the hypergeometric distribution parameters can be expressed as:
+\[
+q_{1k} \sim \text{Hypergeom}(r_k, q_k, r_{1k}).
+\]
+
+This means that \( q_{1k} \) represents the number of "successes" (failures) observed when sampling \( r_{1k} \) individuals \textit{without replacement} from the \( r_k \) individuals, among whom \( q_k \) have "failed."
+
+### Mean of \( q_{1k} \)
+
+The mean of \( q_{1k} \), using the properties of the hypergeometric distribution, is given by:
+\[
+\mathbb{E}[q_{1k}] = r_{1k} \cdot \frac{q_k}{r_k}.
+\]
+
+**Explanation:**
+
+- The \textit{proportion of failures} in the total population at time \( t_k \) is \( \frac{q_k}{r_k} \).
+- If we randomly draw \( r_{1k} \) individuals, the expected number of failures is the sample size multiplied by the failure proportion:
+\[
+\mathbb{E}[q_{1k}] = r_{1k} \cdot \frac{q_k}{r_k}.
+\]
+
+This matches Equation (11.5) in the ISLR notes.
+
+### Variance of \( q_{1k} \)
+
+The variance of \( q_{1k} \), which accounts for sampling \textit{without replacement}, is:
+\[
+\text{Var}(q_{1k}) = r_{1k} \cdot \frac{q_k}{r_k} \cdot \left( 1 - \frac{q_k}{r_k} \right) \cdot \frac{r_k - r_{1k}}{r_k - 1}.
+\]
+
+**Step-by-Step Derivation:**
+
+1. **Binomial-like Structure:**
+   If sampling \textit{with replacement}, the variance would resemble the binomial variance:
+   \[
+   \text{Var}(q_{1k})_{\text{binomial}} = r_{1k} \cdot p \cdot (1 - p),
+   \]
+   where \( p = \frac{q_k}{r_k} \) is the failure proportion.
+
+2. **Finite Population Correction Factor:**
+   Since we are sampling \textit{without replacement}, the variance is reduced by a correction factor:
+   \[
+   \text{Correction factor} = \frac{r_k - r_{1k}}{r_k - 1}.
+   \]
+
+3. **Combining Terms:**
+   Incorporating the correction factor into the binomial variance:
+   \[
+   \text{Var}(q_{1k}) = r_{1k} \cdot \frac{q_k}{r_k} \cdot \left( 1 - \frac{q_k}{r_k} \right) \cdot \frac{r_k - r_{1k}}{r_k - 1}.
+   \]
+
+**Components:**
+
+- \( r_{1k} \): Sample size for group 1.
+- \( \frac{q_k}{r_k} \): Failure proportion in the population.
+- \( 1 - \frac{q_k}{r_k} \): Success proportion in the population.
+- \( \frac{r_k - r_{1k}}{r_k - 1} \): Finite population correction factor.
+
+This matches Equation (11.6) in the ISLR notes.
+
+
+### **4. Discussion/Conclusions**
+- The survival analysis demonstrated significant survival disparities based on sex, ECOG performance,institution, and weight loss.
+- Female patients, better ECOG scores, and lower weight loss groups had better outcomes.
+-There is treatment inequality between institutions. 
+- Clinical implications include the need for tailored treatment plans based on these prognostic factors.
+
+
+

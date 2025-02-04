@@ -1,0 +1,237 @@
+---
+title: "Data Analysis: Chi-Square Test: R background"
+author: 'MANOS Thanos'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+---
+
+## Introduction to Chi-Square Test in R (short intro)
+
+Chi-Square test in R is a statistical method which used to determine if two categorical variables have a significant correlation between them. The two variables are selected from the same population. Furthermore, these variables are then categorised as Male/Female, Red/Green, Yes/No etc. 
+
+For example: We can build a dataset with observations on people’s cake buying pattern. And, try to correlate the gender of a person with the flavour of the cake they prefer. Although, if a correlation is being found, we can plan for an appropriate stock of flavours by knowing the number of people visiting with respect to gender.
+
+Syntax: **chisq.test()** is a function used to perform test.
+
+Syntax of a chi-square test: **chisq.test(data)**
+
+Following is the description of the chi-square test parameters:
+
+*	The input data is in the form of a table that contains the count value of the variables in the observation.
+
+*	We use chisq.test function to perform the chi-square test of independence in the native stats package in R. For this test, the function requires the contingency table to be in the form of a matrix. Depending on the form of the data, to begin with, this can need an extra step, either combining vectors into a matrix or cross-tabulating the counts among factors in a data frame. 
+
+*	We use **read.table** and **as.matrix** to read a table as a matrix. While using this, be careful of extra spaces at the end of lines. Also, for extraneous characters on the table, as these can cause errors.
+
+### Background knowledge – Predictive Modeling
+
+It is a technique where we use statistical modeling or machine learning algorithms to predict response variables based on one or more predictors. Hence, the predictors are features that influence the response in some way. Also, the models work best if the features are meaningful and thus have a significant relationship with the response.
+
+### Hypothetical Example: Effectiveness of a Drug Treatment
+
+To test the effectiveness of a drug for a certain medical condition, we will consider a hypothetical case. Suppose we have 105 patients under study and 50 of them were treated with the drug. Moreover, the remaining 55 patients were kept under control samples. Thus, the health condition of all patients was checked after a week. With the following table, we can assess if their condition has improved or not. By observing this table, one can you tell if the drug had a positive effect on the patient?
+
+![](./table.png)
+
+Here in this example, we can see that 35 out of the 50 patients showed improvement. Suppose if the drug had no effect, the 50 will split the same proportion of the patients who were not given the treatment. Here, in this case, improvement of the control case is high as about 70% of patients showed improvement, since both categorical variables which we have already defined must have only 2 levels. Also, it was sort of perceptive today that the drug treatment and health condition are dependent.
+
+### Chi-Square Test
+
+Particularly in this test, we have to check the p-values. Moreover, like all statistical tests, we assume this test as a null hypothesis and an alternate hypothesis. The main thing is, we reject the null hypothesis if the p-value that comes out in the result is less than a predetermined significance level, which is 0.05 usually, then we reject the null hypothesis.
+
+H$_0$: The two variables are independent.
+
+H$_1$: The two variables relate to each other.
+
+In the case of a null hypothesis, a chi-square test is to test the two variables that are independent.
+
+### R Code
+
+We will work on R by doing a chi-squared test on the treatment (X) and improvement (Y) columns in *treatment.csv* [you may find it in Data Analysis Teams channel].
+
+First, read in the **treatment.csv** data.
+
+```{r echo=T, eval=T}
+data_frame <- read.csv("./treatment.csv") #Reading CSV
+table(data_frame$treatment, data_frame$improvement)
+```
+
+Let’s do the **chi-squared test** using the **chisq.test()** function. It takes the two vectors as the input. We also set to turn off Yates’ continuity correction.
+
+```{r echo=T, eval=T}
+chisq.test(data_frame$treatment, data_frame$improvement, correct=FALSE)
+```
+
+We have a chi-squared value of 5.5569. Since we get a $p-$value less than the significance level of 0.05, we reject the null hypothesis and conclude that the two variables are in fact dependent.
+
+## Tabular data (Chi-Square Test in R - a bit more detailed info)
+
+This section describes a series of functions designed to analyze tabular data. Specifically, we look at the functions **prop.test, binom.test, chisq.test**, and **fisher.test**. 
+
+### Single proportions
+
+Tests of single proportions are generally based on the binomial distribution with size parameter $N$ and probability parameter $p$. For large sample sizes, this can be well approximated by a normal distribution with mean $Np$ and variance $Np(1 − p)$. As a rule of thumb, the approximation is satisfactory when the expected numbers of “successes” and “failures” are both larger than 5.
+
+Denoting the observed number of “successes” by $x$, the test for the hypothesis that $p = p_0$ can be based on:
+$$u = \frac{x − Np_0}{\sqrt{Np_0(1-p_0)}}$$
+which has an approximate normal distribution with mean zero and standard deviation 1, or on $u^2$, which has an approximate $\chi^2$ distribution with 1 degree of freedom.
+
+The normal approximation can be somewhat improved by the Yates correction, which shrinks the observed value by half a unit towards the expected value when calculating $u$. We consider an example (Altman, 1991, p. 230) where 39 of 215 randomly chosen patients are observed to have asthma and one wants to test the hypothesis that the probability of a “random patient” having asthma is 0.15. This can be done using prop.test:
+
+```{r echo=T, eval=T}
+prop.test(39,215,.15)
+```
+
+The three arguments to **prop.test** are the number of positive outcomes, the total number, and the (theoretical) probability parameter that you want to test for. The latter is 0.5 by default, which makes sense for symmetrical problems, but this is not the case here. The amount 15% is a bit synthetic since it is rarely the case that one has a specific a priori value to test for. It is usually more interesting to compute a confidence interval for the probability parameter, such as is given in the last part of the output. Notice that we have a slightly unfortunate double usage of the symbol $p$ as the probability parameter of the binomial distribution and as the test probability or $p-$value.
+
+You can also use **binom.test** to obtain a test in the **binomial distribution**. In that way, you get an exact test probability, so it is generally preferable to using **prop.test**, but **prop.test** can do more than testing single proportions. The procedure to obtain the $p-$value is to calculate the point probabilities for all the possible values of x and sum those that are less than or equal to the point probability of the observed $x$.
+
+```{r echo=T, eval=T}
+binom.test(39,215,.15)
+```
+
+The “exact” confidence intervals at the 0.05 level are actually constructed from the two one-sided tests at the 0.025 level. Finding an exact confidence interval using two-sided tests is not a well-defined problem.
+
+### Two independent proportions
+
+The function **prop.test** can also be used to compare two or more proportions. For that purpose, the arguments should be given as two vectors, where the first contains the number of positive outcomes and the second the total number for each group. 
+
+The theory is similar to that for a single proportion. Consider the difference in the two proportions $d = x_1/N_1 − x_2/N_2$, which will be approximately normally distributed with mean zero and variance $V_p(d) = (1/N_1 + 1/N_2) × p(1 − p)$ if the counts are binomially distributed with the same p parameter. So to test the hypothesis that $p_1 = p_2$, plug the common estimate $\hat{p}=(x_1 + x_2)/(n_1 + n_2)$ into the variance formula and look at $u = d/ \sqrt{ V_{\hat{p}}(d)}$, which approximately follows a standard normal distribution, or look at $u^2$, which is approximately $\chi^2(1)$-distributed. A Yates-type correction is possible, but we skip the details. For illustration, we use an example originally due to Lewitt and Machin (Altman, 1991, p. 232):
+
+```{r echo=T, eval=T}
+lewitt.machin.success <- c(9,4)
+lewitt.machin.total <- c(12,13)
+prop.test(lewitt.machin.success,lewitt.machin.total)
+```
+
+The confidence interval given is for the difference in proportions. The theory behind its calculation is similar to that of the test, but there are some technical complications, and a different approximation is used. 
+
+You can also perform the test without the Yates continuity correction. This is done by adding the argument **correct=F**. The continuity correction makes the confidence interval somewhat wider than it would otherwise be, but notice that it nevertheless does not contain zero. Thus, the confidence interval is contradicting the test, which says that there is no significant difference between the two groups with a two-sided test. The explanation lies in the different approximations, which becomes important for tables as sparse as the present one.
+
+
+If you want to be sure that at least the p-value is correct, you can use Fisher’s exact test. We illustrate this using the same data as in the preceding section. The test works by making the calculations in the conditional distribution of the $2×2$ table given both the row and column marginals. This can be difficult to envision, but think of it like this: Take 13 white balls and 12 black balls (success and failure, respectively), and sample the balls without replacement into two groups of sizes 12 and 13. The number of white balls in the first group obviously defines the whole table, and the point is that its distribution can be found as a purely combinatorial problem. The distribution is known as the *hypergeometric distribution*.
+
+The relevant function is **fisher.test**, which requires that data be given in matrix form. This is obtained as follows:
+
+```{r echo=T, eval=T}
+matrix(c(9,4,3,9),2)
+```
+
+```{r echo=T, eval=T}
+lewitt.machin <- matrix(c(9,4,3,9),2)
+fisher.test(lewitt.machin)
+```
+
+Notice that the second column of the table needs to be the number of negative outcomes, not the total number of observations.
+
+Notice also that the confidence interval is for the odds ratio; that is, for the estimate of $(p_1/(1 − p_1))/(p_2/(1 − p_2))$. One can show that if the $ps$ are not identical, then the conditional distribution of the table depends only on the odds ratio, so it is the natural measure of association in connection with the Fisher test. The exact distribution of the test can be worked out also when the odds ratio differs from 1, but there is the same complication as with **binom.test** that a two-sided 95% confidence interval must be pasted together from two one-sided 97.5% intervals. This leads to the opposite inconsistency as with **prop.test**: The test is (barely) significant, but the confidence interval for the odds ratio includes 1. The standard $\chi^2$ test in **chisq.test** works with data in matrix form, like **fisher.test** does. For a $2×2$ table, the test is exactly equivalent to **prop.test**.
+
+```{r echo=T, eval=T}
+chisq.test(lewitt.machin)
+```
+
+## $k$ proportions, test for trend
+
+Sometimes you want to compare more than two proportions. In that case, the categories are often ordered so that you would expect to find a decreasing or increasing trend in the proportions with the group number. 
+
+The example used in this section concerns data from a group of women giving birth where it was recorded whether the child was delivered by caesarean section and what shoe size the mother used (Altman, 1991, p. 229).
+
+The table looks like this:
+
+```{r echo=T, eval=T}
+library(ISwR)
+```
+
+```{r echo=T, eval=T}
+caesar.shoe
+```
+
+To compare $k>2$ proportions, another test based on the normal approximation is available. It consists of the calculation of a weighted sum of squared deviations between the observed proportions in each group and the overall proportion for all groups. The test statistic has an approximate $\chi^2$ distribution with $(k−1)$ degrees of freedom.
+
+To use **prop.test** on a table like **caesar.shoe**, we need to convert it to a vector of “successes” (which in this case is close to being the opposite) and a vector of “trials”. The two vectors can be computed like this:
+
+```{r echo=T, eval=T}
+caesar.shoe.yes <- caesar.shoe["Yes",]
+caesar.shoe.total <- margin.table(caesar.shoe,2)
+caesar.shoe.yes
+```
+
+```{r echo=T, eval=T}
+caesar.shoe.total
+```
+
+Thereafter it is easy to perform the test:
+
+```{r echo=T, eval=T}
+prop.test(caesar.shoe.yes,caesar.shoe.total)
+```
+
+It is seen that the test comes out nonsignificant, but the subdivision is really unreasonably fine in view of the small number of caesarean sections. Notice, by the way, the warning about the $\chi^2$ approximation being dubious, which is prompted by some cells having an expected count less than 5.
+
+You can test for a trend in the proportions using **prop.trend.test**. It takes three arguments: $x, n$, and $score$. The first two of these are exactly as in prop.test, whereas the last one is the score given to the groups, by default simply $1, 2, . . . , k$. The basis of the test is essentially a weighted linear regression of the proportions on the group scores, where we test for a zero slope, which becomes a $\chi^2$ test on 1 degree of freedom.
+
+```{r echo=T, eval=T}
+prop.trend.test(caesar.shoe.yes,caesar.shoe.total)
+```
+
+So if we assume that the effect of shoe size is linear in the group score, then we can see a significant difference. This kind of assumption should not be thought of as something that must hold for the test to be valid. Rather, it indicates the rough type of alternative to which the test should be sensitive.
+
+The effect of using a trend test can be viewed as an approximate subdivision of the test for equal proportions ($\chi^2= 9.29$) into a contribution from the linear effect ($\chi^2=8.02$) on 1 degree of freedom and a contribution from deviations from the linear trend ($\chi^2= 1.27$) on 4 degrees of freedom. So you could say that the test for equal proportions is being diluted or wastes degrees of freedom on testing for deviations in a direction we are not really interested in.
+
+### $r × c$ tables
+
+For the analysis of tables with more than two classes on both sides, you can use **chisq.test** or **fisher.test**, although you should note that the latter can be very computationally demanding if the cell counts are large and there are more than two rows or columns.We have already seen **chisq.test** in a simple example, but with larger tables, some additional features are of interest.
+
+Such a table $(r×c)$ can arise from several different sampling plans, and the notion of “no relation between rows and columns” is correspondingly different. The total in each row might be fixed in advance, and you would be interested in testing whether the distribution over columns is the same for each row, or vice versa if the column totals were fixed. It might also be the case that only the total number is chosen and the individuals are grouped randomly according to the row and column criteria. In the latter case, you would be interested in testing the hypothesis of statistical independence, that the probability of an individual falling into the $ij$th cell is the product $p_{i·}p_{·j}$ of the marginal probabilities. However, the analysis of the table turns out to be the same in all cases.
+
+If there is no relation between rows and columns, then you would expect to have the following cell values:
+$$E_{ij} = \frac{n_{i·} × n_{·j}} {n_{··}}$$
+
+This can be interpreted as distributing each row total according to the proportions in each column (or vice versa) or as distributing the grand total according to the products of the row and column proportions.
+
+The test statistic
+$$X^2 = \Sigma \frac{(O − E)^2} {E}$$
+
+has an approximate $\chi^2$ distribution with $(r − 1) × (c − 1)$ degrees of freedom. Here the sum is over the entire table and the $ij$ indices have been omitted. $O$ denotes the observed values and E the expected values as described above.
+
+We consider the table with caffeine consumption and marital status and compute the $\chi^2$ test:
+
+
+```{r echo=T, eval=T}
+caff.marital <- matrix(c(652,1537,598,242,36,46,38,21,218,327,106,67),
+                        nrow=3,byrow=T)
+colnames(caff.marital) <- c("0","1-150","151-300",">300")
+rownames(caff.marital) <- c("Married","Prev.married","Single")
+caff.marital
+```
+
+The test is highly significant, so we can safely conclude that the data contradict the hypothesis of independence. However, you would generally also like to know the nature of the deviations. To that end, you can look at some extra components of the return value of **chisq.test**.
+
+Notice that **chisq.test** (just like **lm**) actually returns more information than what is commonly printed:
+
+
+```{r echo=T, eval=T}
+chisq.test(caff.marital)$expected
+```
+
+These two tables may then be scrutinized to see where the differences lie. It is often useful to look at a table of the contributions from each cell to the total $\chi^2$. Such a table cannot be directly extracted, but it is easy to calculate:
+
+
+```{r echo=T, eval=T}
+E <- chisq.test(caff.marital)$expected
+O <- chisq.test(caff.marital)$observed
+(O-E)^2/E
+```
+
+There are some large contributions, particularly from too many “abstaining” singles, and the distribution among previously married is shifted in the direction of a larger intake — insofar as they consume caffeine at all. Still, it is not easy to find a simple description of the deviation from independence in these data.
+
+You can also use chisq.test directly on raw (untabulated) data, here using the **juul** data set:
+
+```{r echo=T, eval=T}
+attach(juul)
+chisq.test(tanner,sex)
+```
+
+It may not really be relevant to test for independence between these particular variables. The definition of Tanner stages is gender-dependent by nature.

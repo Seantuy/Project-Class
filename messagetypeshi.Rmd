@@ -1,0 +1,126 @@
+---
+title: "Message Sequence Analysis"
+output: html_notebook
+---
+
+## Load Libraries
+```{r}
+# Load the necessary libraries
+library(TraMineRextras)
+library(tidyverse)
+library(stringr)
+library(ngram)
+library(TraMineR)
+library(tidytext)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Try loading TraMineRextras
+if (!requireNamespace("TraMineRextras", quietly = TRUE)) {
+  install.packages("TraMineRextras")
+}
+```
+
+
+```{r}
+# Read the CSV file
+ms <- read.csv("H:/Downloads/messages.db.csv")
+
+# Filter for the last 6 messages (inverse.rank 1 to 6) and arrange them
+last_six_messages <- ms %>%
+  filter(inverse.rank %in% 1:6) %>%                          # Keep only inverse.rank from 1 to 6
+  arrange(conversationid, inverse.rank) %>%                 # Arrange by conversationid and inverse.rank
+  select(conversationid, inverse.rank, message.type)        # Select relevant columns
+
+# Ensure each conversation has exactly 6 rows, corresponding to inverse.rank 1 to 6
+last_six_messages <- last_six_messages %>%
+  group_by(conversationid) %>%
+  filter(n() == 6) %>%                                      # Keep only conversations with exactly 6 messages
+  ungroup()
+
+# Pivot the data to make each conversationid a sequence
+message_matrix <- last_six_messages %>%
+  spread(key = inverse.rank, value = message.type)          # Spread message types across inverse.rank columns
+
+# Reorder columns: inverse.rank 6 should be first, and inverse.rank 1 last
+message_matrix <- message_matrix %>%
+  select(conversationid, `6`, `5`, `4`, `3`, `2`, `1`)      # Explicitly reorder columns
+
+# Drop the conversationid column for sequence data
+seq_data <- message_matrix %>%
+  select(-conversationid)                                   # Remove conversationid to retain only sequences
+
+# Define the state labels and alphabet
+states <- unique(unlist(seq_data))
+alphabet <- sort(states)                                    # Ensure consistent ordering of states
+labels <- alphabet                                          # Assign labels as the states themselves
+
+# Create sequence data object
+seq_data <- seqdef(seq_data, alphabet = alphabet, labels = labels)
+
+```
+
+
+## Simple Motif Extraction with N-grams
+```{r}
+# Combine messages into sequences for each conversation
+conversation_sequences <- messages %>%
+  group_by(conversationid) %>%
+  arrange(rank) %>%
+  summarise(sequence = paste(message.type, collapse = " ")) %>%
+  ungroup()
+
+# Create trigrams
+trigrams <- conversation_sequences %>%
+  unnest_tokens(trigram, sequence, token = "ngrams", n = 3)
+
+# Count frequencies of trigrams
+trigram_freq <- trigrams %>%
+  count(trigram, sort = TRUE)
+
+# Add frequency and percentage columns
+total_trigrams <- sum(trigram_freq$n)  # Calculate the total number of trigrams
+trigram_freq <- trigram_freq %>%
+  mutate(
+    frequency = n,                             # Copy the raw count as 'frequency'
+    percentage = (n / total_trigrams) * 100    # Calculate percentage
+  )
+
+# View the top trigrams with frequency and percentage
+head(trigram_freq)
+
+```
+
+
+
+```{r}
+# Plot the sequence frequency plot with adjusted legend placement
+if (exists("ggseqfplot")) {
+  ggseqfplot(seq_data, border = TRUE, with.legend = TRUE) +
+    ggtitle("Sequence Frequency Plot for Last 6 Messages (Reordered)") +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",                          # Place the legend at the bottom
+      legend.key.size = unit(1, "cm"),                     # Increase legend key size for better visibility
+      plot.margin = margin(10, 10, 20, 10, "pt")           # Add extra margin below the plot for the legend
+    )
+} else {
+  # Fallback to seqfplot from TraMineR if ggseqfplot is unavailable
+  seqfplot(seq_data, with.legend = TRUE, border = TRUE, main = "Sequence Frequency Plot for Last 6 Messages (Reordered)")
+}
+
+```
+```{r}
+# Summary of the sequence object
+summary(seq_data)
+
+# Plot the sequence distribution plot
+seqdplot(seq_data, with.legend = TRUE, border = NA)
+
+# Plot the sequence frequency plot with adjusted legend placement
+seqfplot(seq_data, with.legend = TRUE, border = TRUE, main = "Sequence Frequency Plot for Last 6 Messages")
+
+```
+
+

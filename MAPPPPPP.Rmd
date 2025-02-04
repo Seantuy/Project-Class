@@ -1,0 +1,157 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(sf)
+library(leaflet)
+
+# Load the shapefile
+EPCI <- st_read("H:/Downloads/Communes françaises (EPCI)/EPCI.shp")
+
+# Simulate population data
+EPCI$population <- sample(1000:100000, nrow(EPCI), replace = TRUE)
+
+# Transform the CRS to WGS84
+EPCI_wgs84 <- st_transform(EPCI, 4326)
+
+# Calculate centroids of the EPCI districts
+centroids <- st_centroid(EPCI_wgs84)
+
+# Add random colors for the choropleth
+EPCI_wgs84$random_color <- sample(colors(), nrow(EPCI_wgs84), replace = TRUE)
+
+# Coordinates for CY Tech
+cy_tech_coords <- c(2.0667, 49.0333)
+
+# Create the interactive map
+leaflet(EPCI_wgs84) %>%
+  addTiles() %>%
+  addPolygons(
+    fillColor = ~random_color,  # Random colors for EPCI districts
+    weight = 1,
+    opacity = 1,
+    color = "white",
+    fillOpacity = 0.7,
+    popup = ~paste("Name:", NOM, "<br>",
+                   "SIREN Code:", CODE_SIREN, "<br>",
+                   "Population:", population)
+  ) %>%
+  addCircleMarkers(
+    data = centroids,  # Use centroids for bubbles
+    radius = ~sqrt(population) * 0.01,  # Adjust scaling factor as needed
+    color = "red",
+    fillOpacity = 0.5,
+    popup = ~paste("Name:", NOM, "<br>",
+                   "Population:", population)
+  ) %>%
+  addMarkers(
+    lng = cy_tech_coords[1],
+    lat = cy_tech_coords[2],
+    popup = "CY Tech"
+  )
+```
+
+```{r}
+library(sf)
+library(leaflet)
+library(dplyr)
+
+# Load the CSV file with corrected column name "g.olocalisation"
+institutions <- read.csv2(
+  "H:/Downloads/opendata (3).csv", 
+  sep = ",", 
+  stringsAsFactors = FALSE, 
+  fileEncoding = "UTF-8-BOM"
+)
+
+colnames(institutions)
+
+
+```
+```{r}
+# Check if "géolocalisation" exists
+if ("Géolocalisation" %in% colnames(institutions)) {
+  # Split "Géolocalisation" into lat/lng
+  split_coords <- strsplit(institutions$Géolocalisation, ",")
+  
+  # Extract latitude and longitude
+  institutions$lat <- sapply(split_coords, function(x) as.numeric(x[1]))
+  institutions$lng <- sapply(split_coords, function(x) as.numeric(x[2]))
+  
+  # Remove rows with missing coordinates
+  institutions <- institutions[!is.na(institutions$lat) & !is.na(institutions$lng), ]
+} else {
+  stop("Column 'Géolocalisation' not found in the dataset.")
+}
+```
+
+```{r}
+library(sf)
+library(leaflet)
+library(dplyr)
+
+EPCI <- st_read("H:/Downloads/Communes françaises (EPCI)/EPCI.shp") %>%
+  st_transform(4326) %>%  # Convert to WGS84
+  mutate(
+    population = sample(1000:1000000, nrow(.), replace = TRUE),  # Replace with real population data
+    random_color = sample(colors(), nrow(.), replace = TRUE)
+  )
+
+
+
+# 3. Create interactive map --------------------------------------------------
+leaflet() %>%
+  addTiles() %>%
+  
+  # Add EPCI choropleth with random colors
+  addPolygons(
+    data = EPCI,
+    fillColor = ~random_color,
+    weight = 1,
+    opacity = 1,
+    color = "white",
+    fillOpacity = 0.7,
+    popup = ~paste("EPCI:", NOM, "<br>Population:", format(population, big.mark = " "))
+  ) %>%
+  
+  # Add population bubbles
+  addCircleMarkers(
+    data = EPCI,
+    lng = ~st_coordinates(st_centroid(.))[,1],
+    lat = ~st_coordinates(st_centroid(.))[,2],
+    radius = ~sqrt(population)/50,
+    color = "black",
+    fillColor = "orange",
+    fillOpacity = 0.6,
+    popup = ~paste("City:", NOM, "<br>Population:", format(population, big.mark = " "))
+  ) %>%
+  
+  # Add institutions markers
+  addCircleMarkers(
+    data = institutions,
+    lng = ~lng,
+    lat = ~lat,
+    radius = 4,
+    color = "blue",
+    fillOpacity = 0.8,
+    popup = ~paste("Institution:", Libellé, "<br>Type:", type.d.établissement)
+  ) %>%
+  
+  # Add CY Tech marker
+  addMarkers(
+    lng = 2.0667, 
+    lat = 49.0333,
+    popup = "<strong>CY Tech</strong><br>1 Rue Guglielmo Marconi, 95000 Cergy"
+  ) %>%
+  
+  # Add legend
+  addLegend(
+    position = "bottomright",
+    colors = "orange",
+    labels = "Population size",
+    title = "Legend"
+  )
+```
+

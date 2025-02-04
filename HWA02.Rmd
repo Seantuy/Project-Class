@@ -1,0 +1,222 @@
+---
+title: 'Data Analysis: HWA02 – Group Exercise Sheet: 2'
+author: 'Name: PAOLO SEAN'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: default
+---
+
+## Descriptive statistics – Introduction
+
+### General instructions:
+Follow the **same instructions as described in HWA1 template and uploading process** whenever applicable, namely if you need to run an R script. Use this template Rmarkdown file in order to **insert the equations** which you may need/use for the analytical calculations. The purpose is to get some hands-on experience in typing simple math formulas with LaTeX. Providing the mathematical formula(s) is part of the evaluation and the learning goal. **This is an ".Rmd" file. Give you answers below using \textcolor{blue}{blue colored text}, click "Knit" and finally submit/upload YOUR PDF file on TEAMS.** 
+
+**Exercise 1: (1 Point)**
+
+Which of the following is an example of ratio scale data?
+
+(a) Score on an accounting final
+
+(b) temperature in Fahrenheit
+
+\textcolor{blue}{(c) weight of cows}
+
+(d) occupation 
+
+(e) all of the above.
+
+**Exercise 2: (1 Point)**
+
+A researcher should not use the mean as a measure of central tendency unless the data is at least on a(n)______  scale:  
+
+(a) nominal  
+
+(b) ordinal   
+
+(c) interval  
+
+(d) ranking   
+
+\textcolor{blue}{(e) ratio}
+
+**Exercise 3: (1 Point)**
+
+Which of the following is a parameter? 
+
+(a) sample mean  
+
+(b) sample standard deviation   
+
+\textcolor{blue}{(c) population mean}  
+
+(d) sample median   
+
+(e) sample mode 
+
+**Exercise 4: (1 Point)**
+
+Which of the following is an example of continuous  data? 
+
+(a) number of children   
+
+\textcolor{blue}{(b) amount of time it takes to assemble an IKEA bookcase } 
+
+(c) total number of phone calls made in a week  
+
+(d) number of bathrooms in a house  
+
+(e) all of the above.
+
+**Exercise 5: (1 Point)**
+
+Which of the following is an example of discrete data?  
+
+(a) circumference of American women’s wrists 
+
+(b) amount of time spent playing computer games 
+
+\textcolor{blue}{(c) total number of phone calls made in a week  }
+
+(d) length of elephant tusks  
+
+(e) all of the above.
+
+**Exercise 6: (1 Point)**
+
+Which of the following is an example of interval scale data?  
+
+(a) religion of Americans
+
+(b) ethnicity of Americans  
+
+\textcolor{blue}{(c) temperature in Centigrade (Celsius) }   
+
+(d) height of Americans  
+
+(e) all of the above. 
+
+**Exercise 7: (1 Point)**
+
+A manufacturer of supercomputers wants to sample 20 out of 500 that have been manufactured this year. An  ID number is  assigned to each of the 500 computers and then 20 random numbers are generated to see which computers to choose for the sample. This is an example of a:  
+
+(a) random data listing  
+
+(b) frequency distribution  
+
+\textcolor{blue}{(c) simple random sample    }  
+
+(d) census      
+
+(e) none of the above.
+
+**Exercise 8: (12 Points)**
+
+A firm wants to establish how long it is supposed to take to assemble a certain product. A random sample of 13 employees is selected and the company measures how long it takes each of them to assemble the product rounded to the nearest minute. 
+
+**Data: 16; 8; 11; 9; 14; 22; 20; 16; 30; 25; 19; 16; 15**
+
+**Solve the following by hand and type the formula you used in LaTeX.**
+
+1. The mean is: _____ (0.5 Point)
+
+2. The median is: _____ (0.5 Point)
+
+3. The mode is: ______ (0.5 Point)
+
+4. The first quartile is: ____ (0.5 Point)
+
+5. The third quartile is: ____ (0.5 Point)
+
+6. The range is: ____ (0.5 Point)
+
+7. The IQR is: ______ (0.5 Point)
+
+8. The variance is: ______ (0.5 Point)
+
+9. The standard deviation is: ______ (0.5 Point)
+
+10. The coefficient of variation is: ______ (0.5 Point)
+
+1. \textbf{Mean:}
+\[ \text{Mean} = \frac{16 + 8 + 11 + 9 + 14 + 22 + 20 + 16 + 30 + 25 + 19 + 16 + 15}{13} = \frac{221}{13} \approx 17.00 \]
+
+2. \textbf{Median:}
+   Arranging the data in ascending order: 8, 9, 11, 14, 15, 16, 16, 16, 19, 20, 22, 25, 30 \\
+   Since there are 13 data points, the median is the average of the 7th and 8th values:
+\[ \text{Median} = \frac{16 + 16}{2} = 16 \]
+
+3. \textbf{Mode:}
+   The mode is the value that appears most frequently. In this case, the mode is 16 as it appears three times.
+
+4. \textbf{First Quartile (Q1):}
+   Since 13 is an odd number, Q1 is the 4th value in the sorted list:
+\[ \text{Q1} = 12,5 \]
+
+5. \textbf{Third Quartile (Q3):}
+   Q3 is the 10th value in the sorted list:
+\[ \text{Q3} = 20 \]
+
+6. \textbf{Range:}
+   Range = Maximum value - Minimum value
+\[ \text{Range} = 30 - 8 = 22 \]
+
+7. \textbf{Interquartile Range (IQR):}
+\[ \text{IQR} = \text{Q3} - \text{Q1} = 20 - 14 = 6 \]
+
+8. \textbf{Variance:}
+\[ \text{Variance} = \frac{\sum{(x_i - \bar{x})^2}}{n} \]
+\[ \text{Variance} = \frac{(16-17.769)^2 + (8-17.769)^2 + \ldots + (15-17.769)^2}{13} \]
+\[ \text{Variance} \approx 34.81 \]
+
+9. \textbf{Standard Deviation:}
+\[ \text{Standard Deviation} = \sqrt{\text{Variance}} \]
+\[ \text{Standard Deviation} \approx \sqrt{34.81} \approx 5.90 \]
+
+10. \textbf{Coefficient of Variation:}
+\[ \text{Coefficient of Variation} = \frac{\text{Standard Deviation}}{\text{Mean}} \]
+\[ \text{Coefficient of Variation} = \frac{5.90}{17.00} \approx 0.347 \]
+
+
+
+11. Solve again the above using R. (7 Points) (**submit R code and result**)
+
+**Exercise 9: (1 Point)**
+
+Which of the following is not a measure of location?
+
+(a) mean
+
+(b) median
+
+(c) variance
+
+(d) percentile
+
+(e) quartile
+
+**Exercise 10: (1 Point)**
+
+Which of the following statements is **False**?
+
+(a) the median is a measure of central tendency
+
+(b) quartiles do not measures of central tendency
+
+(c) the 50th percentile is the median Q2
+
+(d) an extreme value is likely to have a greater effect on the median than the mean false
+
+(e) the 25th percentile is the first quartile (Q1)
+
+
+Exercise 1: E
+Exercise 2: 
+Exercise 
+Exercise
+Exercise
+Exercise
+Exercise
+Exercise
+Exercise
+Exercise
+

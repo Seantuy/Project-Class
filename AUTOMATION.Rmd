@@ -1,0 +1,72 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# Load the necessary libraries
+library(dismo)
+library(raster)
+
+# Define paths
+maxent_jar <- "C:/maxent/maxent.jar"  # Path to MaxEnt jar file
+occurrence_file <- "H:/Desktop/SPECIES/whales_species_lat_long_data.csv"  # Occurrence file (CSV)
+env_layers_dir <- "H:/Desktop/SPECIES/ASCCC"  # Directory containing environmental layers
+
+# Load occurrence data
+occurrences <- read.csv(occurrence_file)
+
+# Extract only latitude and longitude columns as a matrix
+occurrence_coords <- occurrences[, c("decimalLatitude", "decimalLongitude")]
+
+# Create a RasterStack from environmental layers
+env_layers <- stack(list.files(env_layers_dir, pattern="\\.asc$", full.names=TRUE))
+
+# Ensure coordinate system compatibility between layers and occurrences
+if (crs(env_layers)@projargs != "+proj=longlat +datum=WGS84") {
+  crs(env_layers) <- CRS("+proj=longlat +datum=WGS84")
+}
+
+# Check if occurrence points fall within the extent of the environmental layers
+layer_extent <- extent(env_layers)
+within_extent <- occurrence_coords$decimalLatitude >= layer_extent@ymin & 
+                 occurrence_coords$decimalLatitude <= layer_extent@ymax &
+                 occurrence_coords$decimalLongitude >= layer_extent@xmin &
+                 occurrence_coords$decimalLongitude <= layer_extent@xmax
+
+# Filter occurrence points based on extent
+filtered_occurrences <- occurrence_coords[within_extent, ]
+
+# Check if filtering sufficiently reduced NA values
+# Extract raster values at occurrence points
+values_at_occurrences <- extract(env_layers, filtered_occurrences)
+valid_points <- rowSums(is.na(values_at_occurrences)) == 0
+
+# Final set of occurrence points with complete environmental data
+final_occurrences <- filtered_occurrences[valid_points, ]
+
+# Run MaxEnt if the .jar file exists and if we have valid points
+if (file.exists(maxent_jar) && nrow(final_occurrences) > 0) {
+  maxent_model <- maxent(env_layers, final_occurrences, path="H:/Desktop/SPECIES/AUTO", args=c("outputformat=logistic"), maxent=maxent_jar)
+  
+  # Predict habitat suitability
+  pred <- predict(maxent_model, env_layers)
+  
+  # Plot the prediction
+  plot(pred)
+} else {
+  stop("MaxEnt jar file not found at specified path or no valid points found within environmental layers.")
+}
+
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

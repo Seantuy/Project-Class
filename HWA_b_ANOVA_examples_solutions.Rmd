@@ -1,0 +1,149 @@
+---
+title: "ANOVA Exercise Sheet b (solutions)"
+author: 'MANOS Thanos'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+  word_document: default
+---
+
+# ANOVA
+
+## Exercise 1 (One way ANOVA Test)
+
+You will use the poison dataset to implement the one-way ANOVA test. The dataset contains 48 rows and 3 variables:
+
+* Time: Survival time of the animal
+* poison: Type of poison used: factor level: 1,2 and 3
+* treat: Type of treatment used: factor level: 1,2 and 3
+
+Before you start to compute the ANOVA test, you need to prepare the data as follow:
+
+Step 1: Import the data
+
+Step 2: Remove unnecessary variable
+
+Step 3: Convert the variable poison as ordered level
+
+```{r, echo=T, eval=T}
+library(dplyr)
+PATH <- "./poisons.csv"
+
+df <- read.csv(PATH) %>%
+select(-X) %>% 
+mutate(poison = factor(poison, ordered = TRUE))
+glimpse(df)
+```
+
+Our objective is to test the following assumption:
+
+* H0: There is no difference in survival time average between group
+* H3: The survival time average is different for at least one group.
+
+In other words, you want to know if there is a statistical difference between the mean of the survival time according to the type of poison given to the Guinea pig.
+
+You will proceed as follow:
+
+Step 1: Check the format of the variable poison
+
+Step 2: Print the summary statistic: count, mean and standard deviation
+
+Step 3: Plot a box plot
+
+Step 4: Compute the one-way ANOVA test
+
+Step 5: Run a pairwise t-test
+
+Step 1) You can check the level of the poison with the following code. You should see three character values because you convert them in factor with the mutate verb. 
+
+```{r, echo=T, eval=T}
+levels(df$poison)
+```
+
+Step 2) You compute the mean and standard deviation. 
+
+```{r, echo=T, eval=T}
+df %>%
+	group_by(poison) %>%
+	summarise(
+		count_poison = n(),
+		mean_time = mean(time, na.rm = TRUE),
+		sd_time = sd(time, na.rm = TRUE)
+	)
+```
+
+Step 3) In step three, you can graphically check if there is a difference between the distribution. Note that you include the jittered dot. 
+
+
+```{r, echo=T, eval=T}
+library(ggplot2)
+```
+
+```{r, echo=T, eval=T}
+ggplot(df, aes(x = poison, y = time, fill = poison))+geom_boxplot()+geom_jitter(shape = 15, color = "steelblue", position = position_jitter(0.21)) + theme_classic()
+```
+
+Step 4) You can run the one-way ANOVA test with the command aov. The basic syntax for an ANOVA test is:
+
+```{r, echo=T, eval=T}
+#aov(formula, data)
+#Arguments:			
+#- formula: The equation you want to estimate
+#- data: The dataset used	
+```
+
+The syntax of the formula is:
+
+```{r, echo=T, eval=T}
+y ~ X1+ X2+...+Xn # X1 +  X2 +... refers to the independent variables
+y ~ . # use all the remaining variables as independent variables
+```
+
+You can answer our question: Is there any difference in the survival time between the Guinea pig, knowing the type of poison given.
+
+Note that, it is advised to store the model and use the function summary() to get a better print of the results. 
+
+```{r, echo=T, eval=T}
+anova_one_way <- aov(time~poison, data = df)
+summary(anova_one_way)
+```
+Code Explanation
+
+* aov(time ~ poison, data = df): Run the ANOVA test with the following formula
+* summary(anova_one_way): Print the summary of the test
+
+The p-value is lower than the usual threshold of 0.05. You are confident to say there is a statistical difference between the groups, indicated by the "*". 
+    
+## Pairwise comparison
+
+The one-way ANOVA test does not inform which group has a different mean. Instead, you can perform a Tukey test with the function TukeyHSD(). 
+
+
+```{r, echo=T, eval=T}
+TukeyHSD(anova_one_way)
+```
+
+## Two-way ANOVA
+
+A two-way ANOVA test adds another group variable to the formula. It is identical to the one-way ANOVA test, though the formula changes slightly:
+
+$$y=x_1+x_2$$
+
+with is a quantitative variable and and are categorical variables.
+
+Hypothesis in two-way ANOVA test:
+
+* H0: The means are equal for both variables (i.e., factor variable)
+* H3: The means are different for both variables
+
+You add treat variable to our model. This variable indicates the treatment given to the Guinea pig. You are interested to see if there is a statistical dependence between the poison and treatment given to the Guinea pig.
+
+We adjust our code by adding treat with the other independent variable. 
+
+```{r, echo=T, eval=T}
+anova_two_way <- aov(time~poison + treat, data = df)
+summary(anova_two_way)
+```
+
+You can conclude that both poison and treat are statistically different from 0. You can reject the NULL hypothesis and confirm that changing the treatment or the poison impact the time of survival.

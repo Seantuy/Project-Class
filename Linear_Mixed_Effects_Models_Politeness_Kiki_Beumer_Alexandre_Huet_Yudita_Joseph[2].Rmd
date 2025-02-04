@@ -1,0 +1,401 @@
+---
+title: "Linear_Mixed_Effects_Models_Politeness_Kiki_Beumer_Alexandre_Huet_Yudita_Joseph"
+output: html_document
+date: "2024-12-14"
+---
+
+## Tutorial 1
+
+```{r echo=FALSE, warning=FALSE}
+install.packages('lme4')
+```
+```{r warning=FALSE}
+library(lme4) #library for mixed models
+```
+
+```{r}
+polite <- read.csv(file = "politeness_data.csv")
+head(polite)
+```
+```{r}
+str(polite)
+summary(polite)
+```
+```{r}
+str(as.factor(polite$scenario))
+```
+The 'scenario' we can see is numerical, so a min, mean, max are calculated as if they were quantitative. However, these scenarios will be handled in the analysis as categorical.
+The frequency is the only quantitative variable, which we will make predictions for.
+The other variables, subject, gender and attitude will be used as predictors in the models and are quantitative as well.
+
+
+Now that we have familiarized ourselves with the data, we will check if there are any missing values in the data. 
+
+```{r}
+which(is.na(polite$frequency))
+```
+
+This tells us that there is a missing value in row 39. We verified this in Excel and can see indeed that there is an 'NA' value in that row in the frequency column. We will remove this value in order to make the plots.
+```{r}
+# delete the NA value at row 39
+polite <- na.omit(polite)
+```
+
+We can create the linear models in whichever way we want and see whether this model is a good fit. However, whether this model is actually meaningful needs to be verified with the following assumptions.
+
+## Assumptions
+
+### Linearity
+
+If the predicted value is not a linear combination of its predictors, then the linearity assumption is not met. We will verify this by obtaining the residuals and plotting them in a scatter plot. If this plot shows some type of structure of pattern, curve, line, then we do not have linearity. When the fitted values are correlated to the residuals, we would have a badly performing model. Because we would have very large residuals for larger values and smaller residuals for smaller values.
+
+```{r}
+#residual plot
+plot(fitted(lm), residuals(lm), main="The residual Plot")
+```
+Since, we are using categorical values instead of continuous predictors, we can not apply the linearity assumption how we usually do. The model does not except a continuous relationship between gender and frequency, instead it assumes there is a constant difference in the mean frequency between "Male" and "Female" groups.
+The residual plot shows how the fitted data points (the predicted frequencies for each observation, given the values of gender) deviates, but shows no continuous linear relationship is expected between different genders. Therefore, the linearity assumptions is not violated.
+
+### Absence	of	collinearity
+
+"Collinearity is the correlation between predictor variables (or independent variables), such that they express a linear relationship in a regression model."[3]
+
+"If there’s collinearity, the interpretation of the model becomes unstable. Depending	on which one of	correlated predictors is in the model, the fixed effects become significant or cease to be significant."[1]
+
+The Chi-Square test is a statistical test used to examine the association or independence between categorical variables.
+
+```{r}
+# Check for dependency between gender, scenario, attitude
+chisq_test_gend_scen <- chisq.test(table(polite$gender, polite$scenario))
+chisq_test_gend_scen
+chisq_test_gend_atti <- chisq.test(table(polite$gender, polite$attitude))
+chisq_test_gend_atti
+chisq_test_scen_atti <- chisq.test(table(polite$scenario, polite$attitude))
+chisq_test_scen_atti
+```
+
+If the p-value is large (e.g., p>0.05), we fail to reject the null hypothesis and conclude that the variables appear independent.
+
+### Normality of residuals
+
+Checking for normality is usually the first assumption we check fitting a model. However, the tutorial for this project explained to us that 
+"linear	models	are	relatively	robust	against	violations	of	the	assumptions	of	normality"[1]
+
+We can check the normality of the residuals of the model by creating a histogram or a QQ-plot. Since we have created so little graph, we wanted to create both.
+
+```{r}
+hist(residuals(lm_all), main="Histogram of residuals")
+```
+
+```{r}
+qqnorm(residuals(lm_all))
+qqline(residuals(lm_all))
+```
+
+The histogram of residuals approximately normally distributed and in the G-G plot the datapoints almost falls on a straight line, indicating that the residuals of our model has a normal distribution.
+
+### Homoscedasticity
+
+Homoscedasticity is the constant variance of the residual of the model.
+
+```{r}
+lm_all <- lm(frequency ~ gender + attitude + scenario, polite)
+plot(fitted(lm_all), residuals(lm_all), main="Residual Plot", xlab="Fitted Values", ylab="Residuals")
+```
+
+```{r}
+par(mfrow = c(2, 2))  
+plot(lm_all)
+```
+The residuals of the model are not correlated to the fitted values as there is no pattern in the residuals so the homoscedasticity assumption is met. 
+
+This Residuals vs Leverage plot helps identify points with high leverage and large residuals that could influence the regression model. 
+The leverage represents how far a point’s predictor values are from the center of the predictor space. 
+Observations like points 77, 31, and 14 are labeled because they are of interest—point, for example 31, combines moderate leverage with a larger residual. 
+The red lines in all three plots are horizontal which indicate that we have a good model
+
+## Absence	of	influential	data	point
+
+An influential data point is a data point that has a significant impact on the results of a regression model. It affects the fitted regression line (or plane in multivariate models) more than other data points and can change the model's estimates if removed.
+
+```{r}
+# Fit a linear model
+model <- lm(frequency ~ attitude + gender + scenario, data = polite)
+# Check DFbetas
+dfbetas_values <- dfbeta(model)
+head(dfbetas_values)
+# Plot DFbetas
+plot(dfbetas_values, main="DFbetas plot")
+```
+
+The db beta values give us information about the affect of a variable on the coefficient for each row. Here we can see columns such as attitudepol that describe for each row what the amount of influence was on the coefficients. For high (or low negative) values we can conclude that they are of high influence, values close to 0 have little influence. 
+
+```{r}
+print("Linear Model with influential points")
+model <- lm(frequency ~ gender + attitude + scenario, data = polite)
+summary(model)
+
+#removing influential points
+dfbetas_values <- dfbeta(model)
+influential_points_dfbetas <- which(abs(dfbetas_values) > 2, arr.ind = TRUE)
+df_no_influential_dfbetas <- polite[-influential_points_dfbetas[,1], ]
+
+print("Linear Model without influential points")
+model_no_influential_dfbetas <- lm(frequency ~ gender + attitude + scenario, data = df_no_influential_dfbetas)
+
+summary(model_no_influential_dfbetas)
+
+
+```
+
+We can see that there is not a use difference in between the fitted models with or without the influential points. However, we can see that there has been an 8% increase in the $R^2$ value (71% to 79%). We can also see that if we were to test now for alpha = 0.01 or lower, that the attitude coefficient would be statistically significant as well. However, since we have 10 influential point and the total datasize is only 83 observations, we will have data loss of 12%. We think this is a significant decrease in the datasize and thus we decided to perform the model fittings in the rest of the report on the full dataset (not removing the influential points).
+
+
+## Fitting a Linear Model
+
+We start by fitting a simple linear model where the gender predicts the frequency. Since the pitch we want to model, is a numerical value, we will use the lm function.
+```{r}
+#linear model - frequency as a function of gender
+lm <- lm(frequency ~ gender, polite)
+summary(lm)
+```
+From the intercept, we can see that the mean frequency for the females is 246.986, and the mean frequency of males are significantly lower compared to females.
+The p-value  indicates that the difference / coefficient is statistically significant.
+
+Multiple R-squared: $R^2 = 0.69$ implies that 69% variance in the frequency is explained by gender.
+
+```{r}
+library(ggplot2)
+
+# Get the fitted values
+polite$fitted <- predict(lm)
+
+# Plot the data and the fitted line (representing the means)
+ggplot(polite, aes(x = gender, y = frequency)) +
+  geom_point() +  
+  geom_line(aes(x = gender, y = fitted), color = "black", group = 1) +
+  labs(title = "Frequency vs Gender with Difference in Means",
+       x = "Gender",
+       y = "Frequency") +
+  theme_minimal()
+
+```
+The	linear	model	imagines	the	difference	between	males	and	females	as	a	slope.	So,	to	go	“from	females	to	males”,	we	have	to	go	down	-108.110,	which	is	exactly	 the	coefficient	 that	we’ve	seen	above.
+
+To create the line plot within the scatter plot, we use the 'predict' function in order to create polite$fitted. We finally, pass this column to the geom_line to add it to the plot.
+
+We know that this difference is statistically significant, because we have seen that the coefficients from the model are statistically significant
+
+```{r}
+lm_gend_atti <- lm(frequency ~ gender + attitude, polite)
+summary(lm_gend_atti)
+```
+A linear model with function of multiple predictor variables is called multiple regression.
+If we look at the model with two factors (gender and attitude), the intercept represents the female with informal attitude. The intercept in the multiple regression model is slightly higher than the previous linear model, where the frequency of male is significantly lower as we see the slope is -108.3. The polite attitude coefficient is slightly lower with the slope of -19.5.
+
+Moreover, we can see that the attitude politeness coefficient, is statistically significant if we were to test for alpha= 0.05. If we were to test for alpha= 0.01 or lower, we would not be able to reject the hypothesis and the attitude coefficient would not be statistically significant.
+
+```{r warning=FALSE}
+ggplot(polite, aes(x = attitude, y = frequency, color = gender)) +
+  geom_point(size = 2) +
+  geom_smooth(method = "lm") +
+  stat_summary(fun = mean, geom = "line", aes(group = gender), size = 1) +
+  scale_color_manual(values = c("#8eb5ae", "#064c72")) +  
+  labs(title = "Frequency by Attitude and Gender",
+       x = "Attitude",
+       y = "Frequency") +
+  theme_minimal()
+```
+
+## Tutorial 2
+Now that we have created some basic linear models and explored the data, we can move on to the linear mixed models of this project.
+
+The random effects we used in our linear mixed model are the 'subject' and the 'scenario' column. These two random effects will affect our intercept in the model. We have used attitude and gender in the linear model as fixed effects.
+
+In the following boxplot, we evaluate the relationship between the politeness ('attitude'), gender and the pitch ('frequency') once more.
+
+```{r}
+boxplot(frequency ~ attitude*gender,ol=c("white","lightgray"),polite)
+```
+This is the code provided by the tutorial. However, we did learn in the course that when you use the product of two independent variables to predict the model, that it is good practice to include the variables separately as well. Therefore, we recreated the model as follows in order to visualize the difference. 
+```{r}
+boxplot(frequency ~ attitude*gender + attitude + gender,ol=c("white","lightgray"),polite)
+```
+The difference is not significant, but it remains good practice. The boxplots show both pol.F and pol.M; polite for female and polite for male. We can observe that the polite attitude have a lower median frequency than informal for both male and female.
+
+
+## Assumptions
+In tutorial 1, we already checked the homoscedasticity assumption in tutorial 1.
+
+Independence of the variables: 
+
+Influential data points.
+```{r}
+all.res <- numeric(nrow(polite))  
+
+for (i in 1:nrow(polite)) {
+  model_loo <- lmer(frequency ~ attitude + gender + (1 | subject) + (1 | scenario), 
+                    data = polite[-i, ])  
+  
+  all.res[i] <- fixef(model_loo)["(Intercept)"]  
+}
+
+plot(all.res, main = "Leave-One-Out Diagnostics", 
+     ylab = "Intercept Estimates", xlab = "Observation Index")
+      abline(h = fixef(politeness.model)["(Intercept)"], col ="red",lty=2)
+```
+This is for the for loop influence points:
+The plot shows that most of the observations cause minor deviations towards the intercept estimate. However there are a few outliers like the points at 4, 32 and 68 which causes very large deviations and greatly effect the intercept. This tells us they are influential data points. These points appear significantly higher than the general cluster.
+
+```{r}
+install.packages("influence.ME")
+```
+
+```{r}
+library(influence.ME)
+
+#influence data points using influence.ME from tutorial 2
+infl <- influence(politeness.model, obs = TRUE)
+
+#plot for influential data points
+cooks.distance <- cooks.distance(infl)
+plot(cooks.distance, ylab = "Cook's Distance", main = "Influential Data Points")
+abline(h = 4/length(cooks.distance), col ="red",lty=2)
+```
+The plot (which we are using because of tutorial 2) shows the influence of each observation on the model's fixed effects estimates. The red dashed lines represent the threshold for identifying influential data points. The result show that most points are below the threshold meaning they have very little influence on the model. However, we can see that the point at 32 is past the threshold and is a very influential point. Another observation is that points 4 and 68 are also quite influential as they are much closer to the threshold but do not exceed it.
+
+
+## Visualizing the frequency where the intercept is determined by the scenario
+
+The first mixed-effect model we create uses the scenario and the subject as correlated varying slope and intercept. We combine the two since each subject has multiple scenarios where their pitch is measured (M1 has scenario 1,2,3,4,5,6,7).
+
+We then plot the data points and the lineplots are the predicted model.
+
+```{r}
+library(ggplot2)
+
+model <- lmer(frequency ~ gender + (scenario | subject), data = polite)
+
+# Add fitted values to the data
+polite$fitted <- predict(model)
+
+# Plot the data and fitted lines
+ggplot(polite, aes(x = scenario, y = frequency, color = subject)) +
+  geom_line(aes(y = fitted)) +
+  labs(title = "Random Slopes by Subject",
+       x = "Scenario",
+       y = "Frequency") +
+      theme_minimal() + 
+      geom_point()
+```
+
+## Constructing the model 
+Constructing the linear mixed model can be done with the following code. Here we create a model that used the attitude as a fixed effect and subject and scenario as random effects. We have different intercept for different subjects and different intercepts for different scenarios. We accounted for by-subject and by-scenario variation in overall pitch levels/ frequency.
+```{r}
+politeness.model = lmer(frequency ~ attitude + (1|subject) + (1|scenario), data=polite)
+
+summary(politeness.model) #look at the output of the model
+```
+## Random effects table
+The Std. Dev. is the measure of variability in frequency there is because of the scenarios and subjects. In this case due to the way we fit the model, the variability comes from the random intercepts. Scenario causes less variability (14.8) in frequency than the subject (63.4). This can also be seen in the boxplot, since the median difference between female and male, is bigger. The difference of frequency in 'informal' and 'polite' responses is smaller.
+The residual is the ε that is also used in the linear models. This describes the variability that is not due to the scenario or the subject (25.4).
+
+## Fixed effects table
+
+The coefficient “attitudepol” is the slope for the categorical effect of attitude. -19.695 means that to go from “informal” to “polite”, you have to go down -19.695 Hz. We can conclude that the pitch for politeness is Hz lower than the pitch for informal. 
+
+We would like to check if we can reject the null hypothesis with the corresponding t-values. This tells us whether the intercept and attitude politeness coefficients are statistically significant. However, for the linear mixed model, this is tested for differently. We will revisit this later.
+
+Adding gender as an additional fixed effect in our model gives the following: 
+We can add “gender” as a fixed effect, because we saw in the boxplot that the relationship between sex and pitch is systematically different. 
+```{r}
+politeness.model = lmer(frequency ~ attitude + gender + (1|subject) + (1|scenario), data=polite)
+
+summary(politeness.model)
+```
+## Random effects
+Now we see that the variability in frequency because of scenario; Std. Dev= 14.8, remains the same. However the variability due to subject is lower (24.8). Residual stays approximately the same as well. 
+
+## Fixed effects 
+The intercept represents the female category for the informal attitude, because these categories come first in the alphabet (taught to us in the tutorial). The politeness and informal defer by approximately 20 Hz.
+By adding gender as a fixed effect we can see that the model is improved. The male and female defer by about 109 Hz. A large amount of variability in pitch frequency is therefore taken into account with the gender variable. Previously, this was attributed to unexplained variance.
+Adding this fixed effect reduces the random variability in frequency due to the subjects. We can see a decrease in variability from 63.4 to 24.8. Implying that gender is one of the reasons for the differences in frequency between individuals. However, from earlier we know that the variability attributed to scenarios had remained unchanged with 14.8. Therefore indicating that the scenario level effects are independent of gender.
+Looking at the results we can also see that "attitudepol" coefficient has an estimate of -20 which shows that when people change from informal to polite attitude, it will reduce pitch frequency by approximately 20 Hz.
+
+## Statistical Significance
+P-values for linear mixed models are a more challenging to interpret than those of the linear models. When summarizing the created mixed model the corresponding p-values for each parameter are not given. We tried to calculate the critical values based on a set confidence interval and the degress of freedom. However, the df is difficult to calculate, since we are dealing with mixed effect models. We can estimate whether a certain coefficient was statistically significant by looking at the the value relative to the domain of the frequencies. To not make any false assumptions, we did not do this.
+Instead we will fit models with different fixed and mixed effects and compare those models with the help of ANOVA. With the comparison, we can see if any addition of a random or a fixed effect improves the model. 
+
+```{r}
+fixef(politeness.model) # gets fixed effects estimates
+confint(politeness.model) # gets fixed effects confidence intervals
+ranef(politeness.model) # get random effects estimates (cant get their confints)
+```
+
+When we redo the model, but add 'REML=FALSE'. We will create one model with the attitude as a parameter and one without. The we can perform the likelihood ratio rest on both models with the ANOVA test.
+The ANOVA test generally compares the means and breaks down the variability in the data. This can be applied for our models to compare them.
+```{r}
+politeness.model = lmer(frequency ~ attitude + gender + (1|subject) + (1|scenario), 
+data=polite, REML=FALSE)
+
+summary(politeness.model)
+```
+```{r}
+politeness.null = lmer(frequency ~ gender + (1|subject) + (1|scenario), data=polite, REML=FALSE)
+
+summary(politeness.null)
+```
+These two models can be interpreted similarly as done before. Performing the ANOVA test on the two fit models gives the following output:
+```{r}
+anova(politeness.null,politeness.model) #compare politeness.null with politeness.model
+```
+This was done in order to evaluate and determine if adding the fixed effect attitude would significantly improve the model's ability to explain the variability in pitch. The politeness.null includes only gender as a fixed effect and random intercepts for subject and scenario. Whereas, politeness.model adds the fixed effect attitude. By comparing both of these models we are able to test and conclude whether the inclusion of attitude explains a meaningful amount of variance in the frequency.
+Analyzing the results we see that the politeness.model has a log-likelihood of -397.5 which is improvement when comparing to the politeness.null with a log-likelihood of -403.4. To add on, we can see that the Chi-square for the likelihood ratio test is about 11.6 with 1 degree of freedom. This measures the improvement in model fit from adding the fixed effect attitude. Furthermore, we see that the associated p-value is 0.0006532. Therefore it is highly significant proving that the attitude has a significant effect on frequency.
+
+```{r}
+install.packages('ggeffects')
+```
+
+## Random slope versus random intercept 
+The following code gives us the coefficients of the model by subject and by scenario:
+```{r}
+coef(politeness.model)
+```
+This shows us the intercept for each different subject and each different scenario. Since we specified for this model to have the random intercepts for subject and for scenario this is thus to be expected. We can see however that all the intercepts for the "male" are the same. The intercepts for the "polite" attitude differ. 
+We accounted for the baseline difference (intercept) in the frequency/ pitch, but the effect on the politeness (frequency) and gender is going to be the same; the slope of each line in the model.
+This assumption however, might not be the case. We can therefore also add a random slope to the model. 
+The following model that we will build assumes or checks whether the subject and / or scenario have an effect on the politeness as well. 
+
+Here we fit a new mixed effects model. The fixed effects will be the attitude and the gender. The effect of attitude on frequency can differ for each subject, and their intercept can also vary. Also, the effect of attitude on pitch can be different for each scenario. 
+```{r}
+politeness.model = lmer(frequency ~ attitude + gender + (1+attitude|subject) +
+(1+attitude|scenario),data=polite, REML=FALSE)
+
+summary(politeness.model)
+```
+Here the intercepts of the fixed effects are approximately the same as the model previously created with the gender as a fixed effect. The "polite" slope is approximately the same as well. The "male" slope is decreased by 2. 
+Random effects account for the variability between different subjects and scenarios. In this model, random slopes and intercepts are specified for both subject and scenario, meaning each subject and each scenario can have their own intercept and slope for attitude.
+The amount of variation in the intercept for each scenario around the overall mean intercept; Std Dev: 13.5. For the subject this is about 20. 
+The is the variability in the slope of attitude across different scenarios is 5.5 and that of the subject is 1.3. The 'Corr' tells us that there is a correlation between the intercept and the slope of the scenario of 0.22. Which is a small positive correlation, but not very high. 
+The correlation between the intercept and the slope of the subject is 1, which is the maximum positive correlation possible. 
+The residual standard deviation is the unexplained variation in the data which is approximately 25.
+
+See how this changes the coefficients of the politeness model. 
+```{r}
+coef(politeness.model)
+```
+This shows us the new intercepts for each different subject and each different scenario. We can see that the intercepts or the "male" have increased from approximately 111 to 109. They are however still all equal. The attitude "politeness" intercepts have changed as well. Before we could wee that all the intercepts were different. However, with our new model, the intercepts are all equal as well; -20. The tutorial explained us that the intercepts are all the same, due to the fact that we did not specify random slopes for the by-subject or by-item effect of gender.
+
+We again try to fit a different model.
+```{r}
+politeness.null = lmer(frequency ~ gender + (1+attitude|subject) + (1+attitude|scenario), 
+data=polite, REML=FALSE)
+```
+```{r}
+anova(politeness.null,politeness.model)
+```
+
+## Conclusion 
+To conclude, this report explores the relationship between politeness, gender, and vocal pitch through the use of linear mixed-effects modeling. The dataset politeness_data.csv was thoroughly analysed with the use of different libraries such as lme4,  ggplot2 and influence.ME. The study included different Visualizations, including box plots which provided key insights to the link between politeness attitude, gender, and pitch frequency. Furthermore, ANOVA was utilized to analyze and compare two models which offered deeper insights into the model performance and its significance. The different models and tests from the report demonstrated that politeness is significantly influenced by both gender and pitch across different scenarios.
+
+

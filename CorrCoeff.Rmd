@@ -1,0 +1,183 @@
+---
+title: "Correlation Coefficient"
+author: 'MANOS Thanos'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document:
+        latex_engine: xelatex
+---
+
+## Install and load required R packages
+
+```{r}
+library("ggpubr")
+```
+
+
+## Methods for correlation analyses
+
+There are different methods to perform correlation analysis:
+
+- Pearson correlation ($r$), which measures a linear dependence between two variables ($x$ and $y$). It’s also known as a parametric correlation test because it depends to the distribution of the data. It can be used only when $x$ and $y$ are from normal distribution. The plot of $y = f(x)$ is named the linear regression curve.
+
+- Kendall $\tau$ and Spearman $\rho$, which are rank-based correlation coefficients (non-parametric)
+
+**The most commonly used method is the Pearson correlation method.**
+
+### Pearson correlation 
+
+**If the $p-$value is < 5%, then the correlation between $x$ and $y$ is significant.**
+
+### Spearman correlation 
+
+Spearman’s rank correlation coefficient or Spearman’s ρ, named after Charles Spearman is a nonparametric measure of rank correlation (statistical dependence between the rankings of two variables). It assesses how well the relationship between two variables can be described using a monotonic function.
+
+**Important Inference to keep in mind**: The Spearman correlation can evaluate a monotonic relationship between two variables — Continous or Ordinal and it is based on the ranked values for each variable rather than the raw data.
+
+What is a monotonic relationship?
+
+A monotonic relationship is a relationship that does one of the following:
+
+(1) as the value of one variable increases, so does the value of the other variable, OR,
+
+(2) as the value of one variable increases, the other variable value decreases.
+
+BUT, not exactly at a constant rate whereas in a linear relationship the rate of increase/decrease is constant.
+
+### Kendall correlation formula (not discussed here ...)
+
+## **Compute correlation in R**
+
+### R functions
+
+Correlation coefficient can be computed using the functions **cor()** or **cor.test()**:
+
+- cor(): computes the correlation coefficient
+
+- cor.test(): test for association/correlation between paired samples. It returns both the correlation coefficient and the significance level (or p-value) of the correlation.
+
+
+```{r, eval=F}
+cor(x, y, method = c("pearson", "kendall", "spearman"))
+cor.test(x, y, method=c("pearson", "kendall", "spearman"))
+```
+
+* $x, y$: numeric vectors with the same length
+
+* method: correlation method
+
+**If your data contain missing values, use the following R code to handle missing values by case-wise deletion.**
+
+```{r, eval=F}
+cor(x, y,  method = "pearson", use = "complete.obs")
+```
+
+Here, we’ll use the built-in R data set mtcars as an example. The R code below computes the correlation between mpg and wt variables in mtcars data set:
+
+```{r, eval=T}
+my_data <- mtcars
+head(my_data, 6)
+```
+
+
+Let us compute the correlation between **mpg** and **wt** variables.
+
+### Visualize your data using scatter plots
+
+Here, we’ll use the ggpubr R package.
+
+
+```{r, eval=T}
+library("ggpubr")
+ggscatter(my_data, x = "mpg", y = "wt", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Miles/(US) gallon", ylab = "Weight (1000 lbs)")
+```
+
+### Preleminary test to check the test assumptions
+
+1. Is the covariation linear? Yes, form the plot above, the relationship is linear. In the situation where the scatter plots show curved patterns, we are dealing with nonlinear association between the two variables.
+
+2. Are the data from each of the 2 variables $(x, y)$ follow a normal distribution?
+
+* Use Shapiro-Wilk normality test –> R function: shapiro.test()
+
+* and look at the normality plot —> R function: ggpubr::ggqqplot()
+
+3. Shapiro-Wilk test can be performed as follow:
+
+* Null hypothesis: the data are normally distributed
+
+* Alternative hypothesis: the data are not normally distributed.
+
+```{r}
+# Shapiro-Wilk normality test for mpg
+shapiro.test(my_data$mpg) # => p = 0.1229
+# Shapiro-Wilk normality test for wt
+shapiro.test(my_data$wt) # => p = 0.09
+```
+
+**From the output, the two p-values are greater than the significance level 0.05 implying that the distribution of the data are not significantly different from normal distribution. In other words, we can assume the normality.**
+
+* **Visual inspection** of the data normality using **Q-Q plots** (quantile-quantile plots). Q-Q plot draws the correlation between a given sample and the normal distribution.
+```{r}
+library("ggpubr")
+# mpg
+ggqqplot(my_data$mpg, ylab = "MPG")
+# wt
+ggqqplot(my_data$wt, ylab = "WT")
+```
+
+**From the normality plots, we conclude that both populations may come from normal distributions.**
+
+**Note that, if the data are not normally distributed, it’s recommended to use the non-parametric correlation, including Spearman and Kendall rank-based correlation tests.**
+
+## Pearson correlation test
+
+Correlation test between mpg and wt variables:
+```{r}
+res <- cor.test(my_data$wt, my_data$mpg, 
+                    method = "pearson")
+res
+```
+
+In the result above:
+
+* t is the t-test statistic value (t = -9.559),
+
+* df is the degrees of freedom (df= 30),
+
+* p-value is the significance level of the t-test (p-value = $1.29410^{-10}$),
+
+* conf.int is the confidence interval of the correlation coefficient at 95% (conf.int $= [-0.9338, -0.7441]$),
+
+* sample estimates is the correlation coefficient (Cor.coeff = -0.87).
+
+
+### **Interpretation of the result**
+
+The p-value of the test is $1.29410^{-10}$, which is less than the significance level alpha = 0.05. We can conclude that wt and mpg are significantly correlated with a correlation coefficient of -0.87 and p-value of $1.29410^{-10}$.
+
+Access to the values returned by **cor.test()** function
+
+The function cor.test() returns a list containing the following components:
+
+* p.value: the p-value of the test
+
+* estimate: the correlation coefficient
+
+```{r}
+# Extract the p.value
+res$p.value
+```
+
+```{r}
+# Extract the correlation coefficient
+res$estimate
+```
+
+
+
+
+

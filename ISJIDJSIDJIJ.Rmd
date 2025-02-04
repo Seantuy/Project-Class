@@ -1,0 +1,251 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+install.packages("fpc")
+```
+
+
+```{r}
+
+library(fpc)
+m<-read.csv("H:/Downloads/data_moon_2.csv")
+
+db <- fpc::dbscan(m, eps = 0.4, MinPts = 4)
+hullplot(m, db$cluster)
+
+```
+```{r}
+# Load the dbscan package
+
+library(dbscan)
+
+# Perform DBSCAN clustering
+res <- dbscan::dbscan(m, eps = 0.5, minPts = 5)
+
+# Visualize clusters using pairs plot
+pairs(m, col = res$cluster + 1L, pch = 19, main = "DBSCAN Clustering")
+
+```
+
+```{r}
+library(dplyr)
+m_rescaled <- 
+  m |> 
+  select(where(is.numeric)) |>
+  select(where(~ sd(.) != 0)) |> 
+  mutate(across(everything(), ~ (. - mean(.)) / sd(.)))
+
+
+oopsie <- 
+  kmeans(
+    m_rescaled, 
+    center = 2, 
+    nstart = 20, 
+    iter.max = 10
+  )
+
+
+
+# And let's plot the result to compare:
+fviz_cluster(
+  oopsie, 
+  geom = "point",        # Use points to represent each eruption
+  data = m_rescaled,          # The data to be plotted
+  show.clust.cent = T,   # If you want to show the centroid of each cluster
+  ellipse = T            # If you want an ellipse drawn around each cluster
+) + 
+  labs(title = "Moon Data Clustered with k = 2") + 
+  
+  theme_bw() + 
+  
+  theme(legend.position = "none")
+```
+
+
+```{r}
+# Compute the dendrogram
+dendrogram <- hclust(d = dist(m, method = 'euclidean'), method = 'ward.D')
+
+# Plot the dendrogram
+plot(dendrogram,
+     main = 'Dendrogram',
+     xlab = 'Observations',
+     ylab = 'Euclidean distances')
+
+# Cut the dendrogram into 2 clusters
+clusters <- cutree(dendrogram, k = 2)
+
+# Print the cluster assignments
+print(clusters)
+
+# Add rectangles to the dendrogram to indicate the clusters
+rect.hclust(dendrogram, k = 2, border = 2:3)
+
+
+```
+
+```{r}
+# Load necessary libraries
+set.seed(123)
+data_blob <- data.frame(
+  X1 = c(rnorm(50, mean = 2, sd = 0.5), rnorm(50, mean = 6, sd = 0.5), rnorm(50, mean = 10, sd = 0.5)),
+  X2 = c(rnorm(50, mean = 2, sd = 0.5), rnorm(50, mean = 6, sd = 0.5), rnorm(50, mean = 10, sd = 0.5)),
+  X3 = c(rnorm(50, mean = 3, sd = 0.5), rnorm(50, mean = 7, sd = 0.5), rnorm(50, mean = 11, sd = 0.5)),
+  X4 = c(rnorm(50, mean = 4, sd = 0.5), rnorm(50, mean = 8, sd = 0.5), rnorm(50, mean = 12, sd = 0.5)),
+  cluster = rep(1:3, each = 50) # True cluster labels
+)
+
+
+
+
+```
+
+```{r}
+
+# Perform k-means clustering
+kmeans_result <- kmeans(
+  data_blob, 
+  centers = 3, 
+  nstart = 20, 
+  iter.max = 10
+)
+
+# Visualize the clusters
+fviz_cluster(
+  kmeans_result, 
+  data = data_blob, 
+  geom = "point", 
+  ellipse = TRUE
+) +
+  labs(title = "Synthetic Blob Data Clustered with k = 3") +
+  theme_bw()
+```
+```{r}
+summary(data_blob)
+
+library(ggplot2)
+library(ggfortify)
+
+pca <- prcomp(data_blob[, 1:4], scale. = TRUE)
+autoplot(pca, data = data_blob, colour = 'cluster', shape = FALSE)
+
+pairs(data_blob[, 1:4], col = data_blob$cluster, pch = 19)
+
+install.packages("ClusterR")
+library(ClusterR)
+
+# Removing the true cluster column for clustering
+data_without_labels <- data_blob[, 1:4]
+
+# Apply KMeans++ initialization and clustering
+set.seed(123)
+kmeans_result <- KMeans_rcpp(data_without_labels, clusters = 3, num_init = 5, initializer = 'kmeans++')
+
+print(kmeans_result)
+
+table(True = data_blob$cluster, Predicted = kmeans_result$clusters)
+
+library(cluster)
+silhouette_score <- silhouette(kmeans_result$clusters, dist(data_without_labels))
+plot(silhouette_score)
+
+library(mclust)
+adjustedRandIndex(data_blob$cluster, kmeans_result$clusters)
+
+
+
+
+```
+```{r}
+# Load necessary libraries
+library(ggplot2)
+
+# Parameters
+data_sizes <- seq(500, 5000, by = 500)  # Varying dataset sizes
+k <- 3  # Fixed number of clusters for the experiment
+time_results <- data.frame(size = integer(), algorithm = character(), time = numeric())
+
+# Generate centers for synthetic data
+centers <- matrix(c(2, 2, 5, 5, 8, 2), ncol = 2, byrow = TRUE)
+sd <- 0.5
+
+# Loop over dataset sizes
+for (n in data_sizes) {
+  # Generate data
+ set.seed(123)
+
+# Define parameters for the centers of clusters
+centers <- data.frame(
+  X1 = c(2, 6, 10),
+  X2 = c(2, 6, 10),
+  X3 = c(3, 7, 11),
+  X4 = c(4, 8, 12)
+)
+
+n <- 150  # Total number of points
+sd <- 0.5 # Standard deviation for clusters
+
+# Generate data based on the centers
+data_blob <- do.call(rbind, lapply(1:nrow(centers), function(i) {
+  cbind(
+    rnorm(n / nrow(centers), mean = centers[i, "X1"], sd = sd),
+    rnorm(n / nrow(centers), mean = centers[i, "X2"], sd = sd),
+    rnorm(n / nrow(centers), mean = centers[i, "X3"], sd = sd),
+    rnorm(n / nrow(centers), mean = centers[i, "X4"], sd = sd),
+    cluster = rep(i, n / nrow(centers))
+  )
+}))
+
+# Convert to a data frame and assign column names
+data <- as.data.frame(data_blob)
+colnames(data) <- c("X1", "X2", "X3", "X4", "cluster")
+
+  
+  # K-means
+  start_time <- Sys.time()
+  kmeans(data, centers = k)
+  end_time <- Sys.time()
+  time_results <- rbind(time_results, data.frame(size = n, algorithm = "k-means", time = as.numeric(difftime(end_time, start_time, units = "secs"))))
+  
+  # K-means++
+  start_time <- Sys.time()
+  kmeans(data, centers = k, algorithm = "Lloyd")  # k-means++ initialization
+  end_time <- Sys.time()
+  time_results <- rbind(time_results, data.frame(size = n, algorithm = "k-means++", time = as.numeric(difftime(end_time, start_time, units = "secs"))))
+  
+  # Hierarchical Clustering
+  start_time <- Sys.time()
+  hc <- hclust(dist(data))  # Hierarchical clustering
+  cutree(hc, k = k)         # Cut the dendrogram into `k` clusters
+  end_time <- Sys.time()
+  time_results <- rbind(time_results, data.frame(size = n, algorithm = "HC", time = as.numeric(difftime(end_time, start_time, units = "secs"))))
+}
+
+# Plot computational time as a function of dataset size
+ggplot(time_results, aes(x = size, y = time, color = algorithm, group = algorithm)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  labs(title = "Computational Time of Clustering Algorithms vs. Dataset Size",
+       x = "Dataset Size (Number of Points)",
+       y = "Time (seconds)",
+       color = "Algorithm") +
+  theme_minimal() +
+  scale_color_manual(values = c("k-means" = "#1f77b4", "k-means++" = "#ff7f0e", "HC" = "#2ca02c"))
+
+```
+
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

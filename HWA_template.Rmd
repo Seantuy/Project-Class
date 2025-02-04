@@ -1,0 +1,390 @@
+---
+title: "Assignment: HWA01"
+author: "LAST First (replace here with your full name)" 
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+pdf_document: default
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(message=FALSE, echo = TRUE, tidy.opts=list(width.cutoff=60)) 
+```
+
+## General Template Instuctions
+To complete and submit such type of exercises, please do the following:
+Your Homework Assignments (HWAs) can be written and submitted either as scripts of commented code (as **.Rmd** files) or as reproducible documents that combine text with code (in a **.pdf** format).
+
+A. A simple .Rmd template is provided here.
+
+B. Alternatively, open a plain R script and save it as for example LAST_First_HWA##_ddmmyyyy.R. Keep short name-versions.
+
+Also enter the current assignment (e.g., HWA01), your name, and the current date at the top of your document. When working on a task, always indicate which task you are answering with appropriate comments.
+
+**Edit your ANSWERS 
+Here is an example how your file **JACKSON_Jane_HWA01_08022021.Rmd** could look:whenever is asked, namely write the script, run the chuck and type a brief reply to the question asked using the output.**
+
+**Apply appropriate modifications withing the chunks below in order to get the output!**
+
+  
+```{r echo=T, eval=FALSE}
+# title: "Assignment: HWA01 "
+# author: "LAST First (replace here with your full name)"
+# date: "`r format(Sys.time(), '%a %d %b %Y')`"
+# output:
+# pdf_document: default
+#
+# Exercise 1: 
+
+# Adding numbers: 
+1 + 2
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Exercise 2: 
+
+# Draw 100 samples from a standard normal distribution: 
+x <- rnorm(100)
+
+# Conduct a t-test on the sample:
+t.test(x)
+
+# etc. ...
+```
+
+C. Complete as many exercises as you can.
+
+D. Upload your *PDF* assignment (and Rmd script when asked) on Teams. If any problems send it to parentheses, like this email [thanos.manos@cyu.fr](thanos.manos@cyu.fr).
+
+IMPORTANT NOTEs: 
+
+(a) I am not suppose to run your script to evaluate your HWAs. The code must appear inside each respective chunk accompanied by the output! 
+
+(b) Make sure your chunks work fine. You can run them one chunk at at time when working, debugging etc. If you click "*knit*", you run the whole script and at times it will be time consuming and unnecessary.
+
+(c) Mind the *line-breaking* when you prepare your PDF!
+
+E. Your final files should include both the commands script and the output. Hence, modify the corresponding fields below accordingly.
+
+## Creating and evaluating objects
+
+| 1. Let's see how we interact with R by creating some simple objects and applying basic functions to them:
+  
+1a. R can be used to create (e.g., numeric) objects and evaluate them, as with any regular calculator:
+```{r echo=T, eval=FALSE}
+a <- 1 # assigns "1" to an object a
+b <- 2 # assigns "2" to an object b
+a + b  # applies "+" to a and b, and prints the result
+sum(a, b) # applies the function sum() to a and b, and prints the result
+
+a <- 100 # to change an object, it must be re-assigned
+a + b
+sum(a, b)
+
+# Note that evaluating  
+# A + B  
+# would yield an Error, as R is case-sensitive!
+```
+
+1b. Creating some vectors:
+```{r echo=T, eval=FALSE}
+x <- 1:10 # creates a sequence of numbers (integers from 1 to 10) and assigns it to a vector x
+y <- 10:1 
+x + y # applies "+" to each element of the vectors x and y, and prints the result
+
+z <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) # a generic way to create a vector
+w <- c("a", "vector", "of", "characters")
+x == z # applies "==" to each element of the vectors x and z
+
+x[3] # returns the 3rd element of x
+y[3] # ...
+w[3:4] # ...
+
+x > 5 # applies "+" to each element of the vectors x and y, and prints the result 
+x[x > 5] # ...
+```
+
+1c. Basic sampling:
+```{r echo=T, eval=FALSE}
+sample(c(0, 1), size = 1) # randomly draws 1 sample from c(0, 1)
+
+coin = c("heads", "tails") # defines the outcomes of a coin
+# sample(coin, size = 10) # tries to randomly draws 10 samples from our coin (flip it 10 times), but ...
+sample(coin, size = 10, replace = TRUE) # ... works!
+
+# Randomly assigning students to groups:
+n.students <- 16
+n.groups <- 4
+groups <- 1:n.groups
+sample(groups, size = n.students, replace = TRUE)
+```
+
+## Installing and loading packages
+
+R is not just a single program, but an entire universe of code from a community of developers (with all the benefits and costs of such diversity). Packages allow to import and use R code of other people.
+
+| 2. Let's install and load the yarrr package (by Nathaniel Phillips) that contains many datasets (like pirates) and functions (like pirateplot).
+
+2a. Installing a package:
+```{r echo=T, eval=FALSE}
+install.packages("yarrr") # installs a package
+############################################################
+### REMEMBER: You only need to install a package ONCE!   ###
+############################################################
+```
+2b. Loading a (previously installed) package:
+```{r echo=T, eval=FALSE}
+library("yarrr")          # loads a package
+```
+
+## Exploring a dataset
+| 3. The pirates dataset included in the yarrr package contains data from a survey of 1,000 pirates.
+
+3a. Get basic information on the pirates dataset:
+```{r echo=T, eval=FALSE}
+?pirates
+```
+
+3b. How many rows and columns are in this dataset?
+```{r echo=T, eval=FALSE}
+nrow(pirates) # number of rows / cases
+ncol(pirates) # number of columns / variables
+```
+
+3c. View the first few rows of the pirates dataset:
+```{r echo=T, eval=FALSE}
+head(pirates)
+```
+
+3d. Show the structure of the pirates dataset:
+```{r echo=T, eval=FALSE}
+str(pirates)
+```
+
+3e. Show the entire dataset in a new window:
+```{r echo=T, eval=FALSE}
+View(pirates)
+```
+
+## Basic descriptives for numeric vectors
+
+| 4. To obtain basic descriptives for numeric data, you can apply in-built R functions to numeric vectors.
+
+4a. What is the mean age? Apply the function mean() to the vector pirates$age:
+```{r echo=T, eval=FALSE}
+mean(pirates$age)
+```
+
+4b. What is the tallest pirate? Apply the function max() to the vector pirates$height.
+
+4c. What was the mean and median weight of the pirates?
+  
+## Basic descriptives for non-numeric data
+  
+| 5. Non-numeric data are typically summarized in frequency tables:
+
+5a. How many pirates are there of each sex?
+```{r echo=T, eval=FALSE}
+table(pirates$sex)
+```
+
+5b. How many pirates are there of each age?
+  
+| 6. To collapse cases over 2 variables, you can use the **aggregate()** function:
+  
+6a. What is the **mean** age for each sex?
+```{r echo=T, eval=FALSE}
+aggregate(formula = age ~ sex, 
+          data = pirates,
+          FUN = mean)
+```
+6b. What is the mean beard length (beard.length) for each sex?
+  
+6c. How many pirates are wearing a headband? What is the median age of pirates for each combination of sex and headband?
+```{r echo=T, eval=FALSE}
+table(pirates$headband)
+aggregate(formula = age ~ sex + headband, 
+          data = pirates,
+          FUN = median)
+```
+
+## Basic Plots
+
+Let's explore some basic plotting commands!
+  
+### Histograms
+  
+| 7. Basic histograms show some variable's distribution of values:
+  
+7a. What is the distribution of pirate ages?
+```{r echo=T, eval=FALSE}
+hist(x = pirates$age)
+```
+7b. What is the distribution of (the number of) pirate tattoos?
+  
+```{r echo=T, eval=FALSE}
+hist(x = pirates$tattoos)
+```
+7c. To get more fancy histograms you can set and customize many parameters:
+```{r echo=T, eval=FALSE}
+ymax <- 200
+
+hist(x = pirates$age,
+     breaks = 15, 
+     main = "Distribution of pirate ages",
+     col = "skyblue",
+     border = "white",
+     xlab = "Age",
+     ylim = c(0, ymax))
+
+# Add the mean as a text label: 
+text(x = mean(pirates$age), y = (ymax - 10), 
+     labels = paste("Mean = ", round(mean(pirates$age), 1)))
+
+# Add a vertical dashed line at the mean: 
+segments(x0 = mean(pirates$age), y0 = 0, 
+         x1 = mean(pirates$age), y1 = (ymax - 20), 
+         col = gray(.2, .5),
+         lwd = 3, 
+         lty = 2)
+```
+
+7d. Combining multiple histograms:
+```{r echo=T, eval=FALSE}
+## 2 overlapping histograms of pirate ages for females and males:
+
+# (a) Start with the female data:
+hist(x = pirates$age[pirates$sex == "female"],
+     main = "Distribution of pirate ages by sex",
+     col = transparent("orange3", .2),
+     border = "white",
+     xlab = "Age", 
+     breaks = seq(0, 50, 2),
+     probability = TRUE,
+     ylab = "", 
+     yaxt = "n")
+
+# (b) add male data:
+hist(x = pirates$age[pirates$sex == "male"],
+     add = TRUE, 
+     probability = TRUE, 
+     border = "white",
+     breaks = seq(0, 50, 2),
+     col = transparent("steelblue3", .5))
+
+# (c) add a legend: 
+legend(x = 40, 
+       y = .05,
+       col = c("orange3", "steelblue3"),
+       legend = c("female", "male"),
+       pch = 16,
+       bty = "n")
+```
+
+### Scatterplots
+| 8. Scatterplots show relations between 2 numeric variables:
+  
+8a. Basic scatterplot of height and weight of pirates:
+```{r echo=T, eval=FALSE}
+## 6A: A simple scatterplot of pirate height and weight
+plot(x = pirates$height,
+     y = pirates$weight,
+     xlab = "Height (cm)",
+     ylab = "Weight (kg)")
+```
+
+8b. A fancier scatterplot of the same data with some additional arguments:
+```{r echo=T, eval=FALSE}
+# Create main plot: 
+plot(x = pirates$height, 
+     y = pirates$weight,
+     main = 'My first scatterplot of pirate data!',
+     xlab = 'Height (in cm)',
+     ylab = 'Weight (in kg)',
+     pch = 16,    # filled circles
+     col = gray(0, .1)) # transparent gray
+
+# Add gridlines:
+grid()
+
+# Create a linear regression model:
+model <- lm(formula = weight ~ height, 
+            data = pirates)
+
+# Add regression line to the plot:
+abline(model,
+       col = 'blue', lty = 2)
+```
+
+### Color palettes
+
+| 9. To obtain prettier colors, the yarrr package offers some pre-designed color palettes:
+  
+9a. Look at all the available palettes from piratepal():
+  
+```{r echo=T, eval=FALSE}
+piratepal()
+```
+9b. Look at some specific palette in more detail:
+  
+```{r echo=T, eval=FALSE}
+piratepal(palette = "google", plot.result = TRUE)
+```
+9c. Look at some other palettes in more detail.
+
+9d. Using the pony palette in a fancy scatterplot of pirate height and weight:
+```{r echo=T, eval=FALSE}
+my.cols <- piratepal(palette = "pony", 
+                     trans = .2, 
+                     length.out = nrow(pirates))
+
+# Create the plot:
+plot(x = pirates$height, y = pirates$weight,
+     main = "Random scatterplot with My Little Pony Colors",
+     xlab = "Pony height",
+     ylab = "Pony weight",
+     pch = 21,  # Round symbols with borders
+     cex = 2,  # magnifying factor of plot text and symbols
+     col = "white",  # white border
+     bg = my.cols,   # random colors
+     bty = "n"       # no plot border
+)
+
+# Add gridlines:
+grid()
+```
+### Barplots
+
+Barplots allow comparisons between categories of a variable:
+  
+10.a Calculate mean height for each favorite.pirate:
+```{r echo=T, eval=FALSE}
+pirate.heights <- aggregate(height ~ favorite.pirate,
+                            data = pirates,
+                            FUN = mean)
+
+barplot(pirate.heights$height, 
+        main = "Barplot of mean height by favorite pirate",
+        names.arg = pirate.heights$favorite.pirate)
+```
+
+10b. The same barplot, but with additional customizations:
+```{r echo=T, eval=FALSE}
+barplot(pirate.heights$height, 
+        ylim = c(0, 200),
+        ylab = "Pirate Height (in cm)",
+        main = "Barplot of mean height by favorite pirate",
+        names.arg = pirate.heights$favorite.pirate, 
+        col = piratepal("basel", trans = .2))
+
+abline(h = seq(0, 200, 25), lty = 3, lwd = c(1, .5))
+```
+
+### Pirateplots
+
+11.a A so-called pirateplot shows the raw values, means and distributions of a numeric variable (like height) by the levels of some categorical variables (like favorite.pirate):
+```{r echo=T, eval=FALSE}
+pirateplot(formula = height ~ favorite.pirate,
+           data = pirates,
+           main = "Pirateplot of height by favorite pirate")
+```
+
+11b. Create a pirateplot of height by sex and eyepatch.

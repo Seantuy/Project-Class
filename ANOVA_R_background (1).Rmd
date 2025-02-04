@@ -1,0 +1,96 @@
+---
+title: "Analysis of Variance (ANOVA): R background"
+author: 'MANOS Thanos'
+date: "`r format(Sys.time(), '%a %d %b %Y')`"
+output:
+  pdf_document: 
+        latex_engine: xelatex
+  word_document: default
+---
+
+Read our slides for the theoretical background and formulas.
+
+## One-way analysis of variance
+
+Simple analyses of variance can be performed in R using the function **lm**, which is also used for **regression analysis**. For more elaborate analyses, there are also the functions **aov** and **lme** (linear mixed effects models, from the **nlme package**).
+
+The main example in this section is the “red cell folate” data from Altman (1991, p. 208). To use **lm**, it is necessary to have the data values in one vector and a factor variable describing the division into groups. The **red.cell.folate** data set contains a data frame in the proper format.
+
+```{r echo=T, eval=T}
+library(ISwR)
+```
+
+```{r echo=T, eval=T}
+attach(red.cell.folate)
+summary(red.cell.folate)
+```
+
+The specification of a one-way analysis of variance is analogous to a regression analysis. **The only difference is that the descriptive variable needs to be a factor and not a numeric variable.** We calculate a model object using **lm** and extract the analysis of variance table with **anova**.
+
+```{r echo=T, eval=T}
+anova(lm(folate~ventilation))
+```
+
+In statistics textbooks, the sums of squares are most often labelled “between groups” and “within groups”. Like most other statistical software, R uses slightly different labelling. Variation between groups is labelled by the name of the grouping factor (ventilation), and variation within groups is labelled Residual. ANOVA tables can be used for a wide range of statistical models, and it is convenient to use a format that is less linked to the particular problem of comparing groups.
+
+For a further example, consider the data set **juul**. Notice that the tanner variable in this data set is a numeric vector and not a factor. For purposes of tabulation, this makes little difference, but it would be a serious error to use it in this form in an analysis of variance:
+
+```{r echo=T, eval=T}
+attach(juul)
+anova(lm(igf1~tanner)) ## WRONG!
+```
+
+This does not describe a grouping of data but a linear regression on the group number! Notice the telltale 1 DF for the effect of tanner.
+
+Things can be fixed as follows:
+
+```{r echo=T, eval=T}
+juul$tanner <- factor(juul$tanner,labels=c("I","II","III","IV","V"))
+detach(juul)
+```
+
+```{r echo=T, eval=T}
+attach(juul)
+summary(tanner)
+
+anova(lm(igf1~tanner))
+```
+
+We needed to reattach the juul data frame in order to use the changed definition. An attached data frame is effectively a separate copy of it (although it does not take up extra space as long as the original is unchanged). The Df column now has an entry of 4 for tanner, as it should.
+
+
+# Relaxing the variance assumption
+
+The traditional one-way ANOVA requires an assumption of equal variances for all groups. There is, however, an alternative procedure that does not require that assumption. It is due to **Welch** and similar to the **unequal-variances t-test**. This has been implemented in the **oneway.test** function:
+
+```{r echo=T, eval=T}
+oneway.test(folate~ventilation)
+```
+
+
+## Graphical presentation
+
+Of course, there are many ways to present grouped data. Here we create a somewhat elaborate plot where the raw data are plotted as a stripchart and overlaid with an indication of means and SEMs (Standard Error of the Means):
+
+```{r echo=T, eval=T}
+xbar <- tapply(folate, ventilation, mean)
+s <- tapply(folate, ventilation, sd)
+n <- tapply(folate, ventilation, length)
+sem <- s/sqrt(n)
+stripchart(folate~ventilation, method="jitter",
+jitter=0.05, pch=16, vert=T)
+arrows(1:3,xbar+sem,1:3,xbar-sem,angle=90,code=3,length=.1)
+lines(1:3,xbar,pch=4,type="b",cex=2)
+```
+
+Here we used pch=16 (small plotting dots) in stripchart and put **vertical=T** to make the “strips” vertical. 
+
+The error bars have been made with arrows, which adds arrows to a plot. We slightly abuse the fact that the angle of the arrowhead is adjustable to create the little crossbars at either end. The first four arguments specify the endpoints, $(x_1, y_1, x_2, y_2)$; the angle argument gives the angle between the lines of the arrowhead and shaft, here set to 90; and length is the length of the arrowhead (in inches on a printout). Finally, **code=3** means that the arrow should have a head at both ends. Note that the x-coordinates of the stripcharts are simply the group numbers.
+
+The indication of averages and the connecting lines are done with lines, where **type="b"** (both) means that both points and lines are printed, leaving gaps in the lines to make room for the symbols. **pch=4** is a cross, and **cex=2** requests that the symbols be drawn in double size. 
+
+It is debatable whether you should draw the plot using 1 SEM as is done here or whether perhaps it is better to draw proper confidence intervals for the means (approximately 2 SEM), or maybe even SD instead of SEM. The latter point has to do with whether the plot is to be used in a descriptive or an analytical manner. Standard errors of the mean are not useful for describing the distributions in the groups; they only say how precisely the mean is determined. On the other hand, SDs do not enable the reader to see at a glance which groups are significantly different. In many fields it appears to have become the tradition to use 1 SEM “because they are the smallest”; that is, it makes differences look more dramatic. 
+
+Probably, the best thing to do is to follow the traditions in the relevant field and “calibrate your eyeballs” accordingly. One word of warning, though: At small group sizes, the rule of thumb that the confidence interval is the mean ± 2SEM becomes badly misleading. At a group size of 2, it actually has to be 12.7 SEM! That is a correction heavily dependent on data having the normal distribution.
+
+If you have such small groups, it may be advisable to use a pooled SD for the entire data set rather than the group-specific SDs. This does, of course, require that you can reasonably assume that the true standard deviation actually is the same in all groups.
